@@ -14,16 +14,288 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      fundis: {
+        Row: {
+          bio: string | null
+          current_lat: number | null
+          current_lng: number | null
+          hourly_rate: number
+          id: string
+          is_available: boolean
+          rating: number
+          service: Database["public"]["Enums"]["service_type"]
+          total_jobs: number
+          updated_at: string
+        }
+        Insert: {
+          bio?: string | null
+          current_lat?: number | null
+          current_lng?: number | null
+          hourly_rate?: number
+          id: string
+          is_available?: boolean
+          rating?: number
+          service: Database["public"]["Enums"]["service_type"]
+          total_jobs?: number
+          updated_at?: string
+        }
+        Update: {
+          bio?: string | null
+          current_lat?: number | null
+          current_lng?: number | null
+          hourly_rate?: number
+          id?: string
+          is_available?: boolean
+          rating?: number
+          service?: Database["public"]["Enums"]["service_type"]
+          total_jobs?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      job_locations: {
+        Row: {
+          created_at: string
+          id: string
+          job_id: string
+          lat: number
+          lng: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          job_id: string
+          lat: number
+          lng: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          job_id?: string
+          lat?: number
+          lng?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_locations_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          client_address: string | null
+          client_id: string
+          client_lat: number
+          client_lng: number
+          commission: number
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          fundi_id: string | null
+          fundi_lat: number | null
+          fundi_lng: number | null
+          id: string
+          price: number
+          service: Database["public"]["Enums"]["service_type"]
+          status: Database["public"]["Enums"]["job_status"]
+          updated_at: string
+        }
+        Insert: {
+          client_address?: string | null
+          client_id: string
+          client_lat: number
+          client_lng: number
+          commission: number
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          fundi_id?: string | null
+          fundi_lat?: number | null
+          fundi_lng?: number | null
+          id?: string
+          price: number
+          service: Database["public"]["Enums"]["service_type"]
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Update: {
+          client_address?: string | null
+          client_id?: string
+          client_lat?: number
+          client_lng?: number
+          commission?: number
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          fundi_id?: string | null
+          fundi_lat?: number | null
+          fundi_lng?: number | null
+          id?: string
+          price?: number
+          service?: Database["public"]["Enums"]["service_type"]
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string
+          id: string
+          phone: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name: string
+          id: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          phone?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ratings: {
+        Row: {
+          client_id: string
+          created_at: string
+          fundi_id: string
+          id: string
+          job_id: string
+          review: string | null
+          stars: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          fundi_id: string
+          id?: string
+          job_id: string
+          review?: string | null
+          stars: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          fundi_id?: string
+          id?: string
+          job_id?: string
+          review?: string | null
+          stars?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: true
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transactions: {
+        Row: {
+          amount: number
+          commission: number
+          created_at: string
+          fundi_earnings: number
+          fundi_id: string
+          id: string
+          job_id: string
+        }
+        Insert: {
+          amount: number
+          commission: number
+          created_at?: string
+          fundi_earnings: number
+          fundi_id: string
+          id?: string
+          job_id: string
+        }
+        Update: {
+          amount?: number
+          commission?: number
+          created_at?: string
+          fundi_earnings?: number
+          fundi_id?: string
+          id?: string
+          job_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transactions_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "client" | "fundi" | "admin"
+      job_status:
+        | "searching"
+        | "accepted"
+        | "on_the_way"
+        | "arrived"
+        | "in_progress"
+        | "completed"
+        | "cancelled"
+      service_type: "plumber" | "electrician" | "carpenter" | "mechanic"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +422,18 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["client", "fundi", "admin"],
+      job_status: [
+        "searching",
+        "accepted",
+        "on_the_way",
+        "arrived",
+        "in_progress",
+        "completed",
+        "cancelled",
+      ],
+      service_type: ["plumber", "electrician", "carpenter", "mechanic"],
+    },
   },
 } as const
