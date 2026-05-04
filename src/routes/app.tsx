@@ -15,7 +15,7 @@ function AppHome() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && !user) navigate({ to: "/auth" });
+    if (!loading && !user) navigate({ to: "/auth", search: { role: "client" } });
   }, [user, loading, navigate]);
 
   if (loading || !profile) {
