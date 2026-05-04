@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Star, MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import ActiveJobLayer, { type ActiveJob } from "./ActiveJobLayer";
 
 type FundiRow = {
   id: string;
@@ -49,6 +50,14 @@ function Recenter({ center, follow }: { center: [number, number]; follow: boolea
   return null;
 }
 
+function CenterOn({ pos }: { pos: [number, number] | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (pos) map.setView(pos, map.getZoom());
+  }, [pos?.[0], pos?.[1], map]);
+  return null;
+}
+
 export default function LiveMap({ service }: { service: ServiceKey }) {
   const { user } = useAuth();
   const [pos, setPos] = useState<[number, number] | null>(null);
@@ -57,6 +66,8 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
   const [selected, setSelected] = useState<FundiWithProfile | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const watchRef = useRef<number | null>(null);
+  const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
+  const [reverseTrack, setReverseTrack] = useState(false);
 
   // 1. Watch user GPS
   useEffect(() => {
@@ -78,6 +89,21 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
       if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current);
     };
   }, []);
+
+  // Stream client GPS into job_locations while a job is active
+  useEffect(() => {
+    if (!activeJob || !user || !pos) return;
+    if (activeJob.status === "completed" || activeJob.status === "cancelled") return;
+    const id = setInterval(() => {
+      supabase.from("job_locations").insert({
+        job_id: activeJob.id,
+        user_id: user.id,
+        lat: pos[0],
+        lng: pos[1],
+      });
+    }, 10_000);
+    return () => clearInterval(id);
+  }, [activeJob?.id, activeJob?.status, user?.id, pos?.[0], pos?.[1]]);
 
   // 2. Initial fundi fetch + realtime subscription
   useEffect(() => {
@@ -162,6 +188,87 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
     };
   }, [service]);
 
+  // Subscribe to the user's active job + status changes in realtime
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+
+    const loadActive = async () => {
+      const { data } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("client_id", user.id)
+        .in("status", ["searching", "accepted", "on_the_way", "arrived", "in_progress"])
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled) setActiveJob((data as ActiveJob) ?? null);
+    };
+    loadActive();
+
+    const channel = supabase
+      .channel(`client-jobs-${user.id}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "jobs", filter: `client_id=eq.${user.id}` },
+        (payload) => {
+          const row = (payload.new ?? payload.old) as ActiveJob | undefined;
+          if (!row) return;
+          if (payload.eventType === "DELETE") {
+            setActiveJob((prev) => (prev?.id === row.id ? null : prev));
+            return;
+          }
+          const prevStatus = activeJobRef.current?.status;
+          if (row.status === "completed" || row.status === "cancelled") {
+            setActiveJob(row);
+            if (row.status === "completed") toast.success("Job completed 🎉");
+            return;
+          }
+          setActiveJob(row);
+          if (prevStatus && prevStatus !== row.status) {
+            const map: Record<string, string> = {
+              accepted: "Fundi accepted your request",
+              on_the_way: "Fundi is on the way",
+              arrived: "Fundi has arrived",
+              in_progress: "Job started",
+            };
+            if (map[row.status]) toast.message(map[row.status]);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id]);
+
+  // keep ref in sync for status transition detection
+  const activeJobRef = useRef<ActiveJob | null>(null);
+  useEffect(() => {
+    activeJobRef.current = activeJob;
+  }, [activeJob]);
+
+  // Look up fundi profile for active job
+  const [activeFundi, setActiveFundi] = useState<{ name: string; phone: string | null } | null>(
+    null,
+  );
+  useEffect(() => {
+    if (!activeJob?.fundi_id) {
+      setActiveFundi(null);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", activeJob.fundi_id)
+      .maybeSingle()
+      .then(({ data }) =>
+        setActiveFundi({ name: data?.full_name ?? "Fundi", phone: data?.phone ?? null }),
+      );
+  }, [activeJob?.fundi_id]);
+
   const meta = SERVICE_META[service];
   const list = useMemo(() => {
     const arr = Object.values(fundis);
@@ -206,6 +313,14 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
     );
   }
 
+  // While reverse-tracking, the map should follow the FUNDI marker, not the user.
+  const fundiPos: [number, number] | null =
+    activeJob && activeJob.fundi_lat != null && activeJob.fundi_lng != null
+      ? [activeJob.fundi_lat, activeJob.fundi_lng]
+      : null;
+
+  const hasActive = !!activeJob;
+
   return (
     <div className="relative h-full w-full">
       <MapContainer
@@ -219,13 +334,14 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
           attribution='&copy; <a href="https://www.openstreetmap.org/">OSM</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <Recenter center={pos} follow={follow} />
+        {!hasActive && <Recenter center={pos} follow={follow} />}
+        {hasActive && reverseTrack && fundiPos && <CenterOn pos={fundiPos} />}
 
         <Marker position={pos} icon={userIcon()}>
           <Popup>You are here</Popup>
         </Marker>
 
-        {list.map(({ f }) => (
+        {!hasActive && list.map(({ f }) => (
           <Marker
             key={f.id}
             position={[f.current_lat!, f.current_lng!]}
@@ -233,10 +349,25 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
             eventHandlers={{ click: () => { setFollow(false); setSelected(f); } }}
           />
         ))}
+
+        {activeJob && (
+          <ActiveJobLayer
+            job={activeJob}
+            userPos={pos}
+            fundiName={activeFundi?.name ?? "Fundi"}
+            fundiPhone={activeFundi?.phone ?? null}
+            reverseTrack={reverseTrack}
+            onReverseTrackChange={setReverseTrack}
+            onClose={() => {
+              setActiveJob(null);
+              setReverseTrack(false);
+            }}
+          />
+        )}
       </MapContainer>
 
       {/* Top stats */}
-      <div className="absolute top-3 left-3 right-3 z-[1000] flex gap-2 pointer-events-none">
+      {!hasActive && <div className="absolute top-3 left-3 right-3 z-[1000] flex gap-2 pointer-events-none">
         <div className="bg-background/95 backdrop-blur rounded-full px-4 py-2 shadow-elegant text-sm font-medium pointer-events-auto">
           <span className="text-primary">{list.length}</span> {meta.label.toLowerCase()}s nearby
         </div>
@@ -248,10 +379,10 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
         >
           <MapPin className="h-4 w-4" /> {follow ? "Following" : "Recenter"}
         </Button>
-      </div>
+      </div>}
 
       {/* Bottom carousel of nearest */}
-      {list.length > 0 && (
+      {!hasActive && list.length > 0 && (
         <div className="absolute bottom-3 left-0 right-0 z-[1000] px-3">
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             {list.slice(0, 8).map(({ f, km }) => (
