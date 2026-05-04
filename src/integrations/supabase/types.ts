@@ -98,6 +98,7 @@ export type Database = {
           completed_at: string | null
           created_at: string
           description: string | null
+          direction: Database["public"]["Enums"]["job_direction"]
           fundi_id: string | null
           fundi_lat: number | null
           fundi_lng: number | null
@@ -116,6 +117,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          direction?: Database["public"]["Enums"]["job_direction"]
           fundi_id?: string | null
           fundi_lat?: number | null
           fundi_lng?: number | null
@@ -134,6 +136,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           description?: string | null
+          direction?: Database["public"]["Enums"]["job_direction"]
           fundi_id?: string | null
           fundi_lat?: number | null
           fundi_lng?: number | null
@@ -287,6 +290,7 @@ export type Database = {
     }
     Enums: {
       app_role: "client" | "fundi" | "admin"
+      job_direction: "fundi_to_client" | "client_to_fundi"
       job_status:
         | "searching"
         | "accepted"
@@ -424,6 +428,7 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["client", "fundi", "admin"],
+      job_direction: ["fundi_to_client", "client_to_fundi"],
       job_status: [
         "searching",
         "accepted",
