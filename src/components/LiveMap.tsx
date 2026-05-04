@@ -165,7 +165,7 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
   const meta = SERVICE_META[service];
   const list = useMemo(() => {
     const arr = Object.values(fundis);
-    if (!pos) return arr;
+    if (!pos) return arr.map((f) => ({ f, km: 0 }));
     return arr
       .map((f) => ({
         f,
