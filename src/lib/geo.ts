@@ -29,3 +29,43 @@ export const DEFAULT_CENTER = { lat: -6.7924, lng: 39.2083 };
 export function formatTsh(n: number) {
   return new Intl.NumberFormat("en-TZ", { maximumFractionDigits: 0 }).format(n) + " TSh";
 }
+
+// ----- OSRM routing (free, no API key) -----
+// Returns route geometry (lat,lng pairs), distance (km) and duration (minutes)
+export type RouteResult = {
+  coords: [number, number][];
+  km: number;
+  minutes: number;
+};
+
+const routeCache = new Map<string, { at: number; res: RouteResult }>();
+
+export async function fetchRoute(
+  from: { lat: number; lng: number },
+  to: { lat: number; lng: number },
+  signal?: AbortSignal,
+): Promise<RouteResult | null> {
+  const key = `${from.lat.toFixed(4)},${from.lng.toFixed(4)}->${to.lat.toFixed(4)},${to.lng.toFixed(4)}`;
+  const cached = routeCache.get(key);
+  if (cached && Date.now() - cached.at < 20_000) return cached.res;
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`;
+    const r = await fetch(url, { signal });
+    if (!r.ok) return null;
+    const j = await r.json();
+    const route = j?.routes?.[0];
+    if (!route) return null;
+    const coords: [number, number][] = (route.geometry.coordinates as [number, number][]).map(
+      ([lng, lat]) => [lat, lng],
+    );
+    const res: RouteResult = {
+      coords,
+      km: route.distance / 1000,
+      minutes: Math.max(1, Math.round(route.duration / 60)),
+    };
+    routeCache.set(key, { at: Date.now(), res });
+    return res;
+  } catch {
+    return null;
+  }
+}
