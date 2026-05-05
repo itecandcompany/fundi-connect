@@ -90,6 +90,7 @@ export type Database = {
       }
       jobs: {
         Row: {
+          arrived_at: string | null
           client_address: string | null
           client_id: string
           client_lat: number
@@ -109,6 +110,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          arrived_at?: string | null
           client_address?: string | null
           client_id: string
           client_lat: number
@@ -128,6 +130,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          arrived_at?: string | null
           client_address?: string | null
           client_id?: string
           client_lat?: number

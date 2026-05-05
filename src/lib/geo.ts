@@ -26,6 +26,9 @@ export type ServiceKey = keyof typeof SERVICE_META;
 // Dar es Salaam default
 export const DEFAULT_CENTER = { lat: -6.7924, lng: 39.2083 };
 
+// Max distance (in meters) within which a fundi can confirm arrival
+export const ARRIVAL_RADIUS_M = 150;
+
 export function formatTsh(n: number) {
   return new Intl.NumberFormat("en-TZ", { maximumFractionDigits: 0 }).format(n) + " TSh";
 }
