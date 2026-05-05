@@ -290,27 +290,11 @@ export default function FundiLivePanel() {
     toast.message("Job cancelled", { description: trimmed });
   };
 
-  const rejectIncoming = async (id: string) => {
+  const rejectIncoming = (id: string) => {
+    // Searching jobs aren't assigned yet, so reject is a local dismissal —
+    // the request stays open for other fundis. No client notification needed.
     setIncoming((prev) => prev.filter((j) => j.id !== id));
-    const reason =
-      window.prompt("Reason for rejecting? (shared with the client)", "Fundi unavailable") ?? "";
-    const trimmed = reason.trim() || "Fundi unavailable";
-    const nowIso = new Date().toISOString();
-    const { error } = await supabase
-      .from("jobs")
-      .update({
-        status: "cancelled",
-        cancellation_reason: trimmed,
-        cancelled_at: nowIso,
-        cancelled_by: user?.id ?? null,
-      })
-      .eq("id", id)
-      .eq("status", "searching");
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.message("Request rejected", { description: trimmed });
+    toast.message("Request dismissed");
   };
 
   return (
