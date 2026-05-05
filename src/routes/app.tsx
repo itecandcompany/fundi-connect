@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { SERVICE_META, type ServiceKey } from "@/lib/geo";
 import { LogOut, MapPin } from "lucide-react";
 import LiveMap from "@/components/LiveMap";
+import FundiLivePanel from "@/components/FundiLivePanel";
 
 export const Route = createFileRoute("/app")({ component: AppHome });
 
@@ -75,13 +76,7 @@ function AppHome() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        <Card className="p-6">
-            <h2 className="font-semibold mb-2">Fundi Dashboard</h2>
-            <p className="text-sm text-muted-foreground">
-              Complete your technician profile and toggle availability to start receiving job requests. The full live-tracking dashboard is coming next.
-            </p>
-            <Link to="/" className="inline-block mt-4"><Button variant="outline">View profile setup</Button></Link>
-        </Card>
+        <FundiLivePanel />
       </main>
     </div>
   );
