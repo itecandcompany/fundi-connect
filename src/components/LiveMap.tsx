@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "
 import { Star, MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ActiveJobLayer, { type ActiveJob } from "./ActiveJobLayer";
+import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
 
 type FundiRow = {
   id: string;
@@ -68,6 +69,11 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
   const watchRef = useRef<number | null>(null);
   const [activeJob, setActiveJob] = useState<ActiveJob | null>(null);
   const [reverseTrack, setReverseTrack] = useState(false);
+
+  // Request permission for cancellation/status notifications
+  useEffect(() => {
+    ensureNotificationPermission();
+  }, []);
 
   // 1. Watch user GPS
   useEffect(() => {
@@ -222,6 +228,20 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
           if (row.status === "completed" || row.status === "cancelled") {
             setActiveJob(row);
             if (row.status === "completed") toast.success("Job completed 🎉");
+            if (row.status === "cancelled") {
+              const r = (row as ActiveJob & { cancellation_reason?: string | null; cancelled_by?: string | null; cancelled_at?: string | null });
+              const byOther = r.cancelled_by && r.cancelled_by !== user.id;
+              const reason = r.cancellation_reason || "No reason provided";
+              const when = r.cancelled_at
+                ? new Date(r.cancelled_at).toLocaleTimeString()
+                : new Date().toLocaleTimeString();
+              if (byOther) {
+                toast.error(`Fundi cancelled the job · ${when}`, { description: reason });
+                sendBrowserNotification("Job cancelled by fundi", `${reason} · ${when}`);
+              } else {
+                toast.message(`Job cancelled · ${when}`, { description: reason });
+              }
+            }
             return;
           }
           setActiveJob(row);

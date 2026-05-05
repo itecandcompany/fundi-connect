@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Loader2, MapPin, X } from "lucide-react";
 import { toast } from "sonner";
 import { SERVICE_META, ARRIVAL_RADIUS_M, haversineKm, type ServiceKey } from "@/lib/geo";
+import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
 
 type JobStatus =
   | "searching"
@@ -26,6 +27,9 @@ type Job = {
   client_lat: number;
   client_lng: number;
   price: number;
+  cancellation_reason?: string | null;
+  cancelled_by?: string | null;
+  cancelled_at?: string | null;
 };
 
 const NEXT: Partial<Record<JobStatus, { next: JobStatus; label: string }>> = {
@@ -42,6 +46,15 @@ export default function FundiLivePanel() {
   const [incoming, setIncoming] = useState<Job[]>([]);
   const [active, setActive] = useState<Job | null>(null);
   const watchRef = useRef<number | null>(null);
+  const activeRef = useRef<Job | null>(null);
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
+
+  // Ask for browser notification permission when fundi goes available
+  useEffect(() => {
+    if (available) ensureNotificationPermission();
+  }, [available]);
 
   // Load fundi row + initial availability
   useEffect(() => {
@@ -128,6 +141,19 @@ export default function FundiLivePanel() {
             row.status === "completed" ||
             row.status === "cancelled"
           ) {
+            // Notify the fundi when the *client* cancels an active job
+            if (
+              row.status === "cancelled" &&
+              row.cancelled_by &&
+              row.cancelled_by !== user.id
+            ) {
+              const reason = row.cancellation_reason || "No reason provided";
+              const when = row.cancelled_at
+                ? new Date(row.cancelled_at).toLocaleTimeString()
+                : new Date().toLocaleTimeString();
+              toast.error(`Client cancelled the job · ${when}`, { description: reason });
+              sendBrowserNotification("Job cancelled by client", `${reason} · ${when}`);
+            }
             setActive((prev) => (prev?.id === row.id ? null : prev));
             return;
           }
@@ -242,10 +268,18 @@ export default function FundiLivePanel() {
 
   const cancelActive = async () => {
     if (!active) return;
-    if (!confirm("Cancel this job?")) return;
+    const reason = window.prompt("Why are you cancelling? (shared with the client)", "");
+    if (reason === null) return; // user dismissed
+    const trimmed = reason.trim() || "Cancelled by fundi";
+    const nowIso = new Date().toISOString();
     const { error } = await supabase
       .from("jobs")
-      .update({ status: "cancelled" })
+      .update({
+        status: "cancelled",
+        cancellation_reason: trimmed,
+        cancelled_at: nowIso,
+        cancelled_by: user?.id ?? null,
+      })
       .eq("id", active.id);
     if (error) {
       toast.error(error.message);
@@ -253,11 +287,14 @@ export default function FundiLivePanel() {
     }
     // Clearing active stops the GPS publishing effect immediately
     setActive(null);
-    toast.message("Job cancelled");
+    toast.message("Job cancelled", { description: trimmed });
   };
 
   const rejectIncoming = (id: string) => {
+    // Searching jobs aren't assigned yet, so reject is a local dismissal —
+    // the request stays open for other fundis. No client notification needed.
     setIncoming((prev) => prev.filter((j) => j.id !== id));
+    toast.message("Request dismissed");
   };
 
   return (
