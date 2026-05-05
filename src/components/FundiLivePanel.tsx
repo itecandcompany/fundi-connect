@@ -4,9 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, MapPin } from "lucide-react";
+import { Loader2, MapPin, X } from "lucide-react";
 import { toast } from "sonner";
-import { SERVICE_META, type ServiceKey } from "@/lib/geo";
+import { SERVICE_META, ARRIVAL_RADIUS_M, haversineKm, type ServiceKey } from "@/lib/geo";
 
 type JobStatus =
   | "searching"
@@ -213,10 +213,51 @@ export default function FundiLivePanel() {
     if (!active) return;
     const step = NEXT[active.status];
     if (!step) return;
-    const patch: { status: JobStatus; completed_at?: string } = { status: step.next };
+    // Geofence: only allow marking "arrived" if within ARRIVAL_RADIUS_M of client
+    if (step.next === "arrived") {
+      if (!pos) {
+        toast.error("Waiting for your GPS…");
+        return;
+      }
+      const meters =
+        haversineKm(
+          { lat: pos[0], lng: pos[1] },
+          { lat: active.client_lat, lng: active.client_lng },
+        ) * 1000;
+      if (meters > ARRIVAL_RADIUS_M) {
+        toast.error(
+          `You're ${Math.round(meters)}m away — get within ${ARRIVAL_RADIUS_M}m of the client to confirm arrival.`,
+        );
+        return;
+      }
+    }
+    const patch: { status: JobStatus; completed_at?: string; arrived_at?: string } = {
+      status: step.next,
+    };
+    if (step.next === "arrived") patch.arrived_at = new Date().toISOString();
     if (step.next === "completed") patch.completed_at = new Date().toISOString();
     const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
     if (error) toast.error(error.message);
+  };
+
+  const cancelActive = async () => {
+    if (!active) return;
+    if (!confirm("Cancel this job?")) return;
+    const { error } = await supabase
+      .from("jobs")
+      .update({ status: "cancelled" })
+      .eq("id", active.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    // Clearing active stops the GPS publishing effect immediately
+    setActive(null);
+    toast.message("Job cancelled");
+  };
+
+  const rejectIncoming = (id: string) => {
+    setIncoming((prev) => prev.filter((j) => j.id !== id));
   };
 
   return (
@@ -247,12 +288,31 @@ export default function FundiLivePanel() {
           </div>
           <div className="text-xs text-muted-foreground">
             Client at {active.client_lat.toFixed(4)}, {active.client_lng.toFixed(4)}
+            {pos && (
+              <>
+                {" · "}
+                {Math.round(
+                  haversineKm(
+                    { lat: pos[0], lng: pos[1] },
+                    { lat: active.client_lat, lng: active.client_lng },
+                  ) * 1000,
+                )}
+                m away
+              </>
+            )}
           </div>
-          {NEXT[active.status] && (
-            <Button className="w-full" onClick={advance}>
-              {NEXT[active.status]!.label}
-            </Button>
-          )}
+          <div className="flex gap-2">
+            {NEXT[active.status] && (
+              <Button className="flex-1" onClick={advance}>
+                {NEXT[active.status]!.label}
+              </Button>
+            )}
+            {active.status !== "in_progress" && (
+              <Button variant="outline" onClick={cancelActive}>
+                <X className="h-4 w-4" /> Cancel
+              </Button>
+            )}
+          </div>
         </Card>
       ) : available ? (
         <Card className="p-4">
@@ -273,9 +333,14 @@ export default function FundiLivePanel() {
                       {j.client_lat.toFixed(3)}, {j.client_lng.toFixed(3)}
                     </div>
                   </div>
-                  <Button size="sm" onClick={() => acceptJob(j)}>
-                    Accept
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => rejectIncoming(j.id)}>
+                      Reject
+                    </Button>
+                    <Button size="sm" onClick={() => acceptJob(j)}>
+                      Accept
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
