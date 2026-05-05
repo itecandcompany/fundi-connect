@@ -244,6 +244,50 @@ export default function LiveMap({ service }: { service: ServiceKey }) {
     };
   }, [user?.id]);
 
+  // Subscribe to live fundi GPS stream from job_locations for the active job
+  useEffect(() => {
+    if (!activeJob || !activeJob.fundi_id) return;
+    const jobId = activeJob.id;
+    const fundiId = activeJob.fundi_id;
+    let cancelled = false;
+
+    // Seed with the most recent fundi location for this job
+    supabase
+      .from("job_locations")
+      .select("lat, lng, created_at")
+      .eq("job_id", jobId)
+      .eq("user_id", fundiId)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setActiveJob((prev) =>
+          prev && prev.id === jobId ? { ...prev, fundi_lat: data.lat, fundi_lng: data.lng } : prev,
+        );
+      });
+
+    const channel = supabase
+      .channel(`job-loc-${jobId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "job_locations", filter: `job_id=eq.${jobId}` },
+        (payload) => {
+          const row = payload.new as { user_id: string; lat: number; lng: number };
+          if (row.user_id !== fundiId) return;
+          setActiveJob((prev) =>
+            prev && prev.id === jobId ? { ...prev, fundi_lat: row.lat, fundi_lng: row.lng } : prev,
+          );
+        },
+      )
+      .subscribe();
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [activeJob?.id, activeJob?.fundi_id]);
+
   // keep ref in sync for status transition detection
   const activeJobRef = useRef<ActiveJob | null>(null);
   useEffect(() => {
