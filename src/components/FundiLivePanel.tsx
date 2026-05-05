@@ -213,7 +213,7 @@ export default function FundiLivePanel() {
     if (!active) return;
     const step = NEXT[active.status];
     if (!step) return;
-    const patch: Record<string, unknown> = { status: step.next };
+    const patch: { status: JobStatus; completed_at?: string } = { status: step.next };
     if (step.next === "completed") patch.completed_at = new Date().toISOString();
     const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
     if (error) toast.error(error.message);
