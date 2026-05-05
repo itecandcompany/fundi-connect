@@ -91,6 +91,9 @@ export type Database = {
       jobs: {
         Row: {
           arrived_at: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
           client_address: string | null
           client_id: string
           client_lat: number
@@ -111,6 +114,9 @@ export type Database = {
         }
         Insert: {
           arrived_at?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           client_address?: string | null
           client_id: string
           client_lat: number
@@ -131,6 +137,9 @@ export type Database = {
         }
         Update: {
           arrived_at?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           client_address?: string | null
           client_id?: string
           client_lat?: number
