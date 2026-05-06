@@ -4,13 +4,31 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Loader2, MapPin, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Loader2,
+  MapPin,
+  X,
+  MessageCircle,
+  Phone,
+  Wallet,
+  Star,
+} from "lucide-react";
 import { toast } from "sonner";
-import { SERVICE_META, ARRIVAL_RADIUS_M, haversineKm, type ServiceKey } from "@/lib/geo";
+import {
+  SERVICE_META,
+  ARRIVAL_RADIUS_M,
+  haversineKm,
+  formatTsh,
+  type ServiceKey,
+} from "@/lib/geo";
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
+import JobChat from "./chat/JobChat";
 
 type JobStatus =
   | "searching"
+  | "quoting"
   | "accepted"
   | "on_the_way"
   | "arrived"
@@ -27,6 +45,10 @@ type Job = {
   client_lat: number;
   client_lng: number;
   price: number;
+  agreed_price: number | null;
+  problem_title: string | null;
+  problem_description: string | null;
+  job_photos: string[];
   cancellation_reason?: string | null;
   cancelled_by?: string | null;
   cancelled_at?: string | null;
@@ -45,18 +67,23 @@ export default function FundiLivePanel() {
   const [pos, setPos] = useState<[number, number] | null>(null);
   const [incoming, setIncoming] = useState<Job[]>([]);
   const [active, setActive] = useState<Job | null>(null);
+  const [clientName, setClientName] = useState<string>("Client");
+  const [clientPhone, setClientPhone] = useState<string | null>(null);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatJobId, setChatJobId] = useState<string | null>(null);
+  const [earnings, setEarnings] = useState({ today: 0, week: 0 });
+  const [quoteFor, setQuoteFor] = useState<Job | null>(null);
+  const [quotePrice, setQuotePrice] = useState("");
+  const [quoteNote, setQuoteNote] = useState("");
+  const [submittingQuote, setSubmittingQuote] = useState(false);
+  const [myQuoteIds, setMyQuoteIds] = useState<Record<string, string>>({});
   const watchRef = useRef<number | null>(null);
-  const activeRef = useRef<Job | null>(null);
-  useEffect(() => {
-    activeRef.current = active;
-  }, [active]);
 
-  // Ask for browser notification permission when fundi goes available
   useEffect(() => {
     if (available) ensureNotificationPermission();
   }, [available]);
 
-  // Load fundi row + initial availability
+  // Load fundi initial state
   useEffect(() => {
     if (!user) return;
     supabase
@@ -67,13 +94,35 @@ export default function FundiLivePanel() {
       .then(({ data }) => setAvailable(!!data?.is_available));
   }, [user?.id]);
 
-  // Watch GPS while available or while a job is active
+  // Load earnings
+  const loadEarnings = async () => {
+    if (!user) return;
+    const since = new Date();
+    since.setDate(since.getDate() - 7);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const { data } = await supabase
+      .from("transactions")
+      .select("fundi_earnings, created_at")
+      .eq("fundi_id", user.id)
+      .gte("created_at", since.toISOString());
+    let today = 0;
+    let week = 0;
+    for (const t of data ?? []) {
+      const e = Number(t.fundi_earnings ?? 0);
+      week += e;
+      if (new Date(t.created_at) >= todayStart) today += e;
+    }
+    setEarnings({ today, week });
+  };
+  useEffect(() => {
+    loadEarnings();
+  }, [user?.id]);
+
+  // GPS watch
   useEffect(() => {
     if (!available && !active) return;
-    if (!("geolocation" in navigator)) {
-      toast.error("GPS not available on this device");
-      return;
-    }
+    if (typeof navigator === "undefined" || !("geolocation" in navigator)) return;
     watchRef.current = navigator.geolocation.watchPosition(
       (p) => setPos([p.coords.latitude, p.coords.longitude]),
       (err) => console.warn("geo err", err),
@@ -81,11 +130,10 @@ export default function FundiLivePanel() {
     );
     return () => {
       if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current);
-      watchRef.current = null;
     };
   }, [available, active?.id]);
 
-  // Push fundi GPS to fundis table + job_locations every 8s
+  // Push GPS
   useEffect(() => {
     if (!user || !pos) return;
     const push = () => {
@@ -100,10 +148,7 @@ export default function FundiLivePanel() {
           lat: pos[0],
           lng: pos[1],
         });
-        supabase
-          .from("jobs")
-          .update({ fundi_lat: pos[0], fundi_lng: pos[1] })
-          .eq("id", active.id);
+        supabase.from("jobs").update({ fundi_lat: pos[0], fundi_lng: pos[1] }).eq("id", active.id);
       }
     };
     push();
@@ -111,7 +156,7 @@ export default function FundiLivePanel() {
     return () => clearInterval(id);
   }, [pos?.[0], pos?.[1], user?.id, active?.id, active?.status]);
 
-  // Load active job + subscribe
+  // Active job
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -127,8 +172,7 @@ export default function FundiLivePanel() {
       if (!cancelled) setActive((data as Job) ?? null);
     };
     load();
-
-    const channel = supabase
+    const ch = supabase
       .channel(`fundi-jobs-${user.id}`)
       .on(
         "postgres_changes",
@@ -141,18 +185,18 @@ export default function FundiLivePanel() {
             row.status === "completed" ||
             row.status === "cancelled"
           ) {
-            // Notify the fundi when the *client* cancels an active job
             if (
               row.status === "cancelled" &&
               row.cancelled_by &&
               row.cancelled_by !== user.id
             ) {
               const reason = row.cancellation_reason || "No reason provided";
-              const when = row.cancelled_at
-                ? new Date(row.cancelled_at).toLocaleTimeString()
-                : new Date().toLocaleTimeString();
-              toast.error(`Client cancelled the job · ${when}`, { description: reason });
-              sendBrowserNotification("Job cancelled by client", `${reason} · ${when}`);
+              toast.error(`Client cancelled the job`, { description: reason });
+              sendBrowserNotification("Job cancelled by client", reason);
+            }
+            if (row.status === "completed") {
+              loadEarnings();
+              toast.success("Job complete — earnings updated");
             }
             setActive((prev) => (prev?.id === row.id ? null : prev));
             return;
@@ -161,14 +205,27 @@ export default function FundiLivePanel() {
         },
       )
       .subscribe();
-
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ch);
     };
   }, [user?.id]);
 
-  // Subscribe to incoming "searching" jobs for the fundi's service
+  // Active client profile
+  useEffect(() => {
+    if (!active?.client_id) return;
+    supabase
+      .from("profiles")
+      .select("full_name, phone")
+      .eq("id", active.client_id)
+      .maybeSingle()
+      .then(({ data }) => {
+        setClientName(data?.full_name ?? "Client");
+        setClientPhone(data?.phone ?? null);
+      });
+  }, [active?.client_id]);
+
+  // Incoming searching jobs for our service
   useEffect(() => {
     if (!user || !available || active) {
       setIncoming([]);
@@ -185,25 +242,39 @@ export default function FundiLivePanel() {
       const { data } = await supabase
         .from("jobs")
         .select("*")
-        .eq("status", "searching")
+        .in("status", ["searching", "quoting"])
         .eq("service", me.service)
         .order("created_at", { ascending: false })
-        .limit(10);
-      if (!cancelled) setIncoming((data as Job[]) ?? []);
+        .limit(15);
+      if (cancelled) return;
+      setIncoming((data as Job[]) ?? []);
+      // Also load my own quote ids per job
+      const ids = (data ?? []).map((d) => d.id);
+      if (ids.length) {
+        const { data: qs } = await supabase
+          .from("job_quotes")
+          .select("id, job_id")
+          .eq("fundi_id", user.id)
+          .in("job_id", ids);
+        const map: Record<string, string> = {};
+        for (const q of qs ?? []) map[q.job_id] = q.id;
+        setMyQuoteIds(map);
+      } else {
+        setMyQuoteIds({});
+      }
     };
     load();
-
-    const channel = supabase
+    const ch = supabase
       .channel(`incoming-jobs-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "jobs", filter: "status=eq.searching" },
+        { event: "*", schema: "public", table: "jobs" },
         () => load(),
       )
       .subscribe();
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      supabase.removeChannel(ch);
     };
   }, [user?.id, available, active?.id]);
 
@@ -213,33 +284,41 @@ export default function FundiLivePanel() {
     await supabase.from("fundis").update({ is_available: v }).eq("id", user.id);
   };
 
-  const acceptJob = async (j: Job) => {
-    if (!user || !pos) {
-      toast.error("Waiting for your GPS…");
+  const sendQuote = async () => {
+    if (!user || !quoteFor) return;
+    const price = Number(quotePrice);
+    if (!(price > 0)) {
+      toast.error("Enter a valid price");
       return;
     }
-    const { error } = await supabase
-      .from("jobs")
-      .update({
+    setSubmittingQuote(true);
+    const { error } = await supabase.from("job_quotes").upsert(
+      {
+        job_id: quoteFor.id,
         fundi_id: user.id,
-        status: "accepted",
-        fundi_lat: pos[0],
-        fundi_lng: pos[1],
-      })
-      .eq("id", j.id)
-      .eq("status", "searching");
+        price,
+        note: quoteNote.trim() || null,
+        status: "pending",
+      },
+      { onConflict: "job_id,fundi_id" },
+    );
+    // Bump job to 'quoting' so it shows up in client's quote list
+    await supabase.from("jobs").update({ status: "quoting" }).eq("id", quoteFor.id).eq("status", "searching");
+    setSubmittingQuote(false);
     if (error) {
       toast.error(error.message);
       return;
     }
-    toast.success("Job accepted");
+    toast.success("Quote sent");
+    setQuoteFor(null);
+    setQuotePrice("");
+    setQuoteNote("");
   };
 
   const advance = async () => {
     if (!active) return;
     const step = NEXT[active.status];
     if (!step) return;
-    // Geofence: only allow marking "arrived" if within ARRIVAL_RADIUS_M of client
     if (step.next === "arrived") {
       if (!pos) {
         toast.error("Waiting for your GPS…");
@@ -252,7 +331,7 @@ export default function FundiLivePanel() {
         ) * 1000;
       if (meters > ARRIVAL_RADIUS_M) {
         toast.error(
-          `You're ${Math.round(meters)}m away — get within ${ARRIVAL_RADIUS_M}m of the client to confirm arrival.`,
+          `You're ${Math.round(meters)}m away — get within ${ARRIVAL_RADIUS_M}m to confirm arrival.`,
         );
         return;
       }
@@ -269,125 +348,283 @@ export default function FundiLivePanel() {
   const cancelActive = async () => {
     if (!active) return;
     const reason = window.prompt("Why are you cancelling? (shared with the client)", "");
-    if (reason === null) return; // user dismissed
+    if (reason === null) return;
     const trimmed = reason.trim() || "Cancelled by fundi";
-    const nowIso = new Date().toISOString();
-    const { error } = await supabase
+    await supabase
       .from("jobs")
       .update({
         status: "cancelled",
         cancellation_reason: trimmed,
-        cancelled_at: nowIso,
+        cancelled_at: new Date().toISOString(),
         cancelled_by: user?.id ?? null,
       })
       .eq("id", active.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    // Clearing active stops the GPS publishing effect immediately
     setActive(null);
-    toast.message("Job cancelled", { description: trimmed });
+    toast.message("Job cancelled");
   };
 
-  const rejectIncoming = (id: string) => {
-    // Searching jobs aren't assigned yet, so reject is a local dismissal —
-    // the request stays open for other fundis. No client notification needed.
-    setIncoming((prev) => prev.filter((j) => j.id !== id));
-    toast.message("Request dismissed");
+  const openChat = (jobId: string) => {
+    setChatJobId(jobId);
+    setChatOpen(true);
   };
 
   return (
     <div className="space-y-4">
-      <Card className="p-4 flex items-center justify-between">
+      {/* Online toggle */}
+      <Card className="p-4 flex items-center justify-between bg-gradient-to-br from-card to-secondary/30 border-2">
         <div>
-          <div className="font-semibold">Availability</div>
+          <div className="font-display font-bold text-lg">
+            {available ? "You're online" : "You're offline"}
+          </div>
           <div className="text-xs text-muted-foreground flex items-center gap-1">
             <MapPin className="h-3 w-3" />
-            {pos ? `${pos[0].toFixed(4)}, ${pos[1].toFixed(4)}` : "Locating…"}
+            {pos ? "GPS active" : "Locating…"}
           </div>
         </div>
-        <Switch checked={available} onCheckedChange={toggleAvailable} />
+        <Switch checked={available} onCheckedChange={toggleAvailable} className="scale-125" />
       </Card>
 
+      {/* Earnings chip */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-success/15 text-success grid place-items-center">
+            <Wallet className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-[11px] uppercase text-muted-foreground">Today</div>
+            <div className="font-bold text-sm">{formatTsh(earnings.today)}</div>
+          </div>
+        </Card>
+        <Card className="p-3 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-primary/15 text-primary grid place-items-center">
+            <Wallet className="h-4 w-4" />
+          </div>
+          <div>
+            <div className="text-[11px] uppercase text-muted-foreground">Past 7 days</div>
+            <div className="font-bold text-sm">{formatTsh(earnings.week)}</div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Active job */}
       {active ? (
-        <Card className="p-4 space-y-3">
+        <Card className="p-4 space-y-3 border-2 border-primary/30">
           <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs text-muted-foreground uppercase">Active job</div>
-              <div className="font-semibold">
-                {SERVICE_META[active.service].icon} {SERVICE_META[active.service].label}
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase text-muted-foreground">Active job</div>
+              <div className="font-display font-bold leading-tight truncate">
+                {SERVICE_META[active.service].icon} {active.problem_title || SERVICE_META[active.service].label}
               </div>
             </div>
-            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary">
+            <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary capitalize whitespace-nowrap">
               {active.status.replace("_", " ")}
             </span>
           </div>
-          <div className="text-xs text-muted-foreground">
-            Client at {active.client_lat.toFixed(4)}, {active.client_lng.toFixed(4)}
-            {pos && (
-              <>
-                {" · "}
-                {Math.round(
-                  haversineKm(
-                    { lat: pos[0], lng: pos[1] },
-                    { lat: active.client_lat, lng: active.client_lng },
-                  ) * 1000,
-                )}
-                m away
-              </>
-            )}
+
+          {active.problem_description && (
+            <p className="text-sm text-muted-foreground">{active.problem_description}</p>
+          )}
+
+          {active.job_photos?.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto scrollbar-none">
+              {active.job_photos.map((url, i) => (
+                <img key={i} src={url} alt="" className="h-20 w-20 object-cover rounded-lg border" />
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between text-sm">
+            <div>
+              <div className="text-[10px] uppercase text-muted-foreground">Client</div>
+              <div className="font-medium">{clientName}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] uppercase text-muted-foreground">Earnings (90%)</div>
+              <div className="font-bold">
+                {formatTsh(Math.round((active.agreed_price ?? active.price) * 0.9))}
+              </div>
+            </div>
           </div>
-          <div className="flex gap-2">
-            {NEXT[active.status] && (
-              <Button className="flex-1" onClick={advance}>
-                {NEXT[active.status]!.label}
-              </Button>
-            )}
-            {active.status !== "in_progress" && (
-              <Button variant="outline" onClick={cancelActive}>
-                <X className="h-4 w-4" /> Cancel
-              </Button>
-            )}
+
+          {pos && (
+            <div className="text-xs text-muted-foreground">
+              {Math.round(
+                haversineKm(
+                  { lat: pos[0], lng: pos[1] },
+                  { lat: active.client_lat, lng: active.client_lng },
+                ) * 1000,
+              )}
+              m to client
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            <Button variant="outline" onClick={() => openChat(active.id)}>
+              <MessageCircle className="h-4 w-4" /> Chat
+            </Button>
+            <Button asChild variant="outline" disabled={!clientPhone}>
+              <a href={clientPhone ? `tel:${clientPhone}` : "#"}>
+                <Phone className="h-4 w-4" /> Call
+              </a>
+            </Button>
+            <Button variant="destructive" onClick={cancelActive}>
+              <X className="h-4 w-4" /> Cancel
+            </Button>
           </div>
+
+          {NEXT[active.status] && (
+            <Button className="w-full h-11" onClick={advance}>
+              {NEXT[active.status]!.label}
+            </Button>
+          )}
         </Card>
       ) : available ? (
         <Card className="p-4">
-          <div className="font-semibold mb-2">Incoming requests</div>
+          <div className="font-display font-semibold mb-3">Open requests</div>
           {incoming.length === 0 ? (
-            <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <div className="text-sm text-muted-foreground flex items-center gap-2 py-6 justify-center">
               <Loader2 className="h-4 w-4 animate-spin" /> Waiting for jobs nearby…
             </div>
           ) : (
-            <div className="space-y-2">
-              {incoming.map((j) => (
-                <div key={j.id} className="flex items-center justify-between border rounded-lg p-3">
-                  <div>
-                    <div className="font-medium text-sm">
-                      {SERVICE_META[j.service].icon} {SERVICE_META[j.service].label}
+            <div className="space-y-3">
+              {incoming.map((j) => {
+                const km =
+                  pos &&
+                  haversineKm(
+                    { lat: pos[0], lng: pos[1] },
+                    { lat: j.client_lat, lng: j.client_lng },
+                  );
+                const myQuote = myQuoteIds[j.id];
+                return (
+                  <div key={j.id} className="border rounded-2xl p-3 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-sm leading-tight">
+                          {j.problem_title || SERVICE_META[j.service].label}
+                        </div>
+                        {j.problem_description && (
+                          <div className="text-xs text-muted-foreground line-clamp-2">
+                            {j.problem_description}
+                          </div>
+                        )}
+                        <div className="text-[11px] text-muted-foreground mt-1">
+                          Budget {formatTsh(j.price)} · {km ? `${km.toFixed(1)} km away` : "—"}
+                        </div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-[10px] uppercase text-muted-foreground">After 10%</div>
+                        <div className="font-bold text-sm">
+                          {formatTsh(Math.round(j.price * 0.9))}
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {j.client_lat.toFixed(3)}, {j.client_lng.toFixed(3)}
+                    {j.job_photos?.length > 0 && (
+                      <div className="flex gap-1 overflow-x-auto scrollbar-none">
+                        {j.job_photos.map((u, i) => (
+                          <img
+                            key={i}
+                            src={u}
+                            alt=""
+                            className="h-14 w-14 object-cover rounded-md border"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => openChat(j.id)}
+                      >
+                        <MessageCircle className="h-3 w-3" /> Chat
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => {
+                          setQuoteFor(j);
+                          setQuotePrice(String(j.price));
+                          setQuoteNote("");
+                        }}
+                      >
+                        {myQuote ? "Update quote" : "Send quote"}
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={() => rejectIncoming(j.id)}>
-                      Reject
-                    </Button>
-                    <Button size="sm" onClick={() => acceptJob(j)}>
-                      Accept
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </Card>
       ) : (
-        <Card className="p-4 text-sm text-muted-foreground">
-          Turn on availability to start receiving job requests.
+        <Card className="p-6 text-center">
+          <div className="mx-auto w-12 h-12 rounded-full bg-muted grid place-items-center mb-2">
+            <Star className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div className="font-medium">Go online to receive jobs</div>
+          <div className="text-xs text-muted-foreground mt-1">
+            We'll show open requests nearby with photos and budgets.
+          </div>
         </Card>
       )}
+
+      {/* Quote modal */}
+      {quoteFor && (
+        <div
+          className="fixed inset-0 z-50 bg-black/40 grid place-items-end sm:place-items-center p-0 sm:p-4"
+          onClick={() => setQuoteFor(null)}
+        >
+          <div
+            className="w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl p-5 space-y-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="font-display font-bold text-lg">Send your quote</div>
+              <Button variant="ghost" size="icon" onClick={() => setQuoteFor(null)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {quoteFor.problem_title} · client budget {formatTsh(quoteFor.price)}
+            </div>
+            <Input
+              type="number"
+              inputMode="numeric"
+              placeholder="Your price (TSh)"
+              value={quotePrice}
+              onChange={(e) => setQuotePrice(e.target.value)}
+              className="h-12 text-base"
+            />
+            <Textarea
+              placeholder="Note for the client (optional)"
+              value={quoteNote}
+              onChange={(e) => setQuoteNote(e.target.value)}
+              rows={2}
+            />
+            <div className="text-xs text-muted-foreground">
+              You'll keep <span className="font-semibold text-foreground">90%</span> · platform fee 10%
+            </div>
+            <Button
+              className="w-full h-12"
+              onClick={sendQuote}
+              disabled={submittingQuote || !quotePrice}
+            >
+              {submittingQuote ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send quote"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <JobChat
+        jobId={chatJobId}
+        open={chatOpen}
+        onOpenChange={(o) => {
+          setChatOpen(o);
+          if (!o) setChatJobId(null);
+        }}
+        title={active && chatJobId === active.id ? clientName : "Chat with client"}
+      />
     </div>
   );
 }

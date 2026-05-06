@@ -127,3 +127,36 @@
 /* Leaflet fixes */
 .leaflet-container { font-family: var(--font-sans); }
 .leaflet-popup-content-wrapper { border-radius: var(--radius); }
+
+/* Bolt-style radar pulse for searching state */
+@keyframes radar-pulse {
+  0%   { transform: scale(0.4); opacity: 0.7; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+.radar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--primary);
+  opacity: 0.25;
+  animation: radar-pulse 2.2s cubic-bezier(0.2, 0.8, 0.2, 1) infinite;
+}
+.radar-ring.delay-1 { animation-delay: 0.7s; }
+.radar-ring.delay-2 { animation-delay: 1.4s; }
+
+/* Bolt-style sheet — pure white with elevation, drag handle */
+.bolt-sheet {
+  background: var(--card);
+  border-top-left-radius: 1.75rem;
+  border-top-right-radius: 1.75rem;
+  box-shadow: 0 -10px 40px -10px oklch(0.18 0.02 150 / 0.18);
+}
+.bolt-handle {
+  width: 36px;
+  height: 4px;
+  border-radius: 4px;
+  background: oklch(0.8 0.01 150);
+  margin: 8px auto 4px;
+}
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }

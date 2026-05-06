@@ -2,9 +2,8 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { SERVICE_META, type ServiceKey } from "@/lib/geo";
-import { LogOut, MapPin } from "lucide-react";
+import { type ServiceKey } from "@/lib/geo";
+import { LogOut, Shield } from "lucide-react";
 import LiveMap from "@/components/LiveMap";
 import FundiLivePanel from "@/components/FundiLivePanel";
 
@@ -24,6 +23,7 @@ function AppHome() {
   }
 
   const isFundi = profile.role === "fundi";
+  const isAdmin = profile.role === "admin";
 
   if (!isFundi) {
     return (
@@ -32,30 +32,22 @@ function AppHome() {
           <div className="px-4 py-3 flex items-center justify-between">
             <div>
               <div className="font-display font-bold leading-tight">FundiFast</div>
-              <div className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3" /> Live in Dar es Salaam</div>
+              <div className="text-xs text-muted-foreground">Live in Dar es Salaam</div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate({ to: "/" }))}>
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="px-3 pb-3 flex gap-2 overflow-x-auto">
-            {(Object.keys(SERVICE_META) as ServiceKey[]).map((k) => {
-              const s = SERVICE_META[k];
-              const active = service === k;
-              return (
-                <button
-                  key={k}
-                  onClick={() => setService(k)}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium border transition-colors ${active ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:border-primary"}`}
-                >
-                  <span className="mr-1">{s.icon}</span>{s.label}
-                </button>
-              );
-            })}
+            <div className="flex items-center gap-1">
+              {isAdmin && (
+                <Button asChild variant="ghost" size="icon">
+                  <Link to="/admin"><Shield className="h-4 w-4" /></Link>
+                </Button>
+              )}
+              <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate({ to: "/" }))}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </header>
         <div className="flex-1 relative">
-          <LiveMap service={service} />
+          <LiveMap service={service} setService={setService} />
         </div>
       </div>
     );
@@ -68,6 +60,11 @@ function AppHome() {
           <div className="font-display font-bold">FundiFast</div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">Hi, {profile.full_name.split(" ")[0]}</span>
+            {isAdmin && (
+              <Button asChild variant="ghost" size="icon">
+                <Link to="/admin"><Shield className="h-4 w-4" /></Link>
+              </Button>
+            )}
             <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate({ to: "/" }))}>
               <LogOut className="h-4 w-4" />
             </Button>
