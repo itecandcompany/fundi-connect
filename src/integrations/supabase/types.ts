@@ -88,8 +88,63 @@ export type Database = {
           },
         ]
       }
+      job_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          job_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          job_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          job_id?: string
+          sender_id?: string
+        }
+        Relationships: []
+      }
+      job_quotes: {
+        Row: {
+          created_at: string
+          fundi_id: string
+          id: string
+          job_id: string
+          note: string | null
+          price: number
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          fundi_id: string
+          id?: string
+          job_id: string
+          note?: string | null
+          price: number
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          fundi_id?: string
+          id?: string
+          job_id?: string
+          note?: string | null
+          price?: number
+          status?: string
+        }
+        Relationships: []
+      }
       jobs: {
         Row: {
+          agreed_price: number | null
           arrived_at: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
@@ -107,12 +162,16 @@ export type Database = {
           fundi_lat: number | null
           fundi_lng: number | null
           id: string
+          job_photos: string[]
           price: number
+          problem_description: string | null
+          problem_title: string | null
           service: Database["public"]["Enums"]["service_type"]
           status: Database["public"]["Enums"]["job_status"]
           updated_at: string
         }
         Insert: {
+          agreed_price?: number | null
           arrived_at?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -130,12 +189,16 @@ export type Database = {
           fundi_lat?: number | null
           fundi_lng?: number | null
           id?: string
+          job_photos?: string[]
           price: number
+          problem_description?: string | null
+          problem_title?: string | null
           service: Database["public"]["Enums"]["service_type"]
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
         Update: {
+          agreed_price?: number | null
           arrived_at?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
@@ -153,9 +216,45 @@ export type Database = {
           fundi_lat?: number | null
           fundi_lng?: number | null
           id?: string
+          job_photos?: string[]
           price?: number
+          problem_description?: string | null
+          problem_title?: string | null
           service?: Database["public"]["Enums"]["service_type"]
           status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      problem_templates: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          service: Database["public"]["Enums"]["service_type"]
+          suggested_price: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          service: Database["public"]["Enums"]["service_type"]
+          suggested_price?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          service?: Database["public"]["Enums"]["service_type"]
+          suggested_price?: number
+          title?: string
           updated_at?: string
         }
         Relationships: []
@@ -305,6 +404,7 @@ export type Database = {
       job_direction: "fundi_to_client" | "client_to_fundi"
       job_status:
         | "searching"
+        | "quoting"
         | "accepted"
         | "on_the_way"
         | "arrived"
@@ -443,6 +543,7 @@ export const Constants = {
       job_direction: ["fundi_to_client", "client_to_fundi"],
       job_status: [
         "searching",
+        "quoting",
         "accepted",
         "on_the_way",
         "arrived",
