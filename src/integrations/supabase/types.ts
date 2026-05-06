@@ -305,6 +305,7 @@ export type Database = {
       job_direction: "fundi_to_client" | "client_to_fundi"
       job_status:
         | "searching"
+        | "quoting"
         | "accepted"
         | "on_the_way"
         | "arrived"
@@ -443,6 +444,7 @@ export const Constants = {
       job_direction: ["fundi_to_client", "client_to_fundi"],
       job_status: [
         "searching",
+        "quoting",
         "accepted",
         "on_the_way",
         "arrived",
