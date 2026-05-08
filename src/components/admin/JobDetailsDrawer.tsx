@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
 import {
   Sheet,
@@ -210,6 +210,8 @@ export default function JobDetailsDrawer({
   const [canceller, setCanceller] = useState<Profile | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const photos = job?.job_photos ?? [];
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const prevPhoto = useCallback(
@@ -429,6 +431,23 @@ export default function JobDetailsDrawer({
         <div
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
           onClick={closeLightbox}
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            touchStartX.current = t.clientX;
+            touchStartY.current = t.clientY;
+          }}
+          onTouchEnd={(e) => {
+            if (touchStartX.current == null || touchStartY.current == null) return;
+            const t = e.changedTouches[0];
+            const dx = t.clientX - touchStartX.current;
+            const dy = t.clientY - touchStartY.current;
+            touchStartX.current = null;
+            touchStartY.current = null;
+            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) && photos.length > 1) {
+              if (dx < 0) nextPhoto();
+              else prevPhoto();
+            }
+          }}
           role="dialog"
           aria-modal="true"
           aria-label="Photo viewer"
