@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   Sheet,
   SheetContent,
@@ -270,6 +271,7 @@ export default function JobDetailsDrawer({
   const commission = Math.round(finalPrice * 0.1);
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -419,7 +421,11 @@ export default function JobDetailsDrawer({
           )}
         </div>
       </SheetContent>
-      {lightboxIndex != null && photos[lightboxIndex] && (
+    </Sheet>
+    {lightboxIndex != null &&
+      photos[lightboxIndex] &&
+      typeof document !== "undefined" &&
+      createPortal(
         <div
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
           onClick={closeLightbox}
@@ -473,8 +479,9 @@ export default function JobDetailsDrawer({
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/80 bg-black/40 px-3 py-1 rounded-full">
             {lightboxIndex + 1} / {photos.length}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
-    </Sheet>
+    </>
   );
 }
