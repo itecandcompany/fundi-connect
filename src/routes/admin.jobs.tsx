@@ -7,6 +7,9 @@ import { Button } from "@/components/ui/button";
 import { SERVICE_META, formatTsh, type ServiceKey } from "@/lib/geo";
 import { toast } from "sonner";
 import { MapPin, X } from "lucide-react";
+import JobDetailsDrawer, {
+  type JobDetailsRow,
+} from "@/components/admin/JobDetailsDrawer";
 
 export const Route = createFileRoute("/admin/jobs")({ component: AdminJobs });
 
@@ -32,7 +35,14 @@ type Job = {
   agreed_price: number | null;
   client_address: string | null;
   problem_title: string | null;
+  problem_description: string | null;
+  job_photos: string[] | null;
   created_at: string;
+  updated_at: string;
+  arrived_at: string | null;
+  completed_at: string | null;
+  cancelled_at: string | null;
+  cancelled_by: string | null;
   cancellation_reason: string | null;
 };
 
@@ -51,6 +61,8 @@ function AdminJobs() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [filter, setFilter] = useState<"active" | "all" | JobStatus>("active");
+  const [selected, setSelected] = useState<JobDetailsRow | null>(null);
+  const [open, setOpen] = useState(false);
 
   const load = async () => {
     const { data } = await supabase
@@ -109,6 +121,11 @@ function AdminJobs() {
     else toast.success("Job cancelled");
   };
 
+  const openDetails = (j: Job) => {
+    setSelected(j as unknown as JobDetailsRow);
+    setOpen(true);
+  };
+
   return (
     <div className="space-y-4 max-w-6xl">
       <div>
@@ -140,7 +157,16 @@ function AdminJobs() {
             <div className="p-6 text-sm text-muted-foreground text-center">No jobs.</div>
           )}
           {filtered.map((j) => (
-            <div key={j.id} className="p-3 md:p-4 hover:bg-muted/30">
+            <div
+              key={j.id}
+              role="button"
+              tabIndex={0}
+              onClick={() => openDetails(j)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") openDetails(j);
+              }}
+              className="p-3 md:p-4 hover:bg-muted/30 cursor-pointer focus:outline-none focus:bg-muted/30"
+            >
               <div className="flex items-start gap-3">
                 <div className="text-2xl">{SERVICE_META[j.service]?.icon}</div>
                 <div className="min-w-0 flex-1">
@@ -175,7 +201,10 @@ function AdminJobs() {
                     variant="ghost"
                     size="sm"
                     className="text-rose-600 shrink-0"
-                    onClick={() => forceCancel(j.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      forceCancel(j.id);
+                    }}
                   >
                     <X className="h-4 w-4" /> Cancel
                   </Button>
@@ -185,6 +214,7 @@ function AdminJobs() {
           ))}
         </div>
       </Card>
+      <JobDetailsDrawer job={selected} open={open} onOpenChange={setOpen} />
     </div>
   );
 }
