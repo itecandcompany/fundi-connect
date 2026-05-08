@@ -271,6 +271,7 @@ export default function JobDetailsDrawer({
   const commission = Math.round(finalPrice * 0.1);
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
