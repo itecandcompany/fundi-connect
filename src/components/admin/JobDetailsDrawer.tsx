@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Sheet,
   SheetContent,
@@ -22,6 +22,9 @@ import {
   Clock,
   User,
   Phone,
+  ChevronLeft,
+  ChevronRight,
+  X as XIcon,
 } from "lucide-react";
 
 type JobStatus =
@@ -204,6 +207,32 @@ export default function JobDetailsDrawer({
   const [client, setClient] = useState<Profile | null>(null);
   const [fundi, setFundi] = useState<Profile | null>(null);
   const [canceller, setCanceller] = useState<Profile | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const photos = job?.job_photos ?? [];
+
+  const closeLightbox = useCallback(() => setLightboxIndex(null), []);
+  const prevPhoto = useCallback(
+    () =>
+      setLightboxIndex((i) =>
+        i == null ? i : (i - 1 + photos.length) % photos.length,
+      ),
+    [photos.length],
+  );
+  const nextPhoto = useCallback(
+    () => setLightboxIndex((i) => (i == null ? i : (i + 1) % photos.length)),
+    [photos.length],
+  );
+
+  useEffect(() => {
+    if (lightboxIndex == null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeLightbox();
+      else if (e.key === "ArrowLeft") prevPhoto();
+      else if (e.key === "ArrowRight") nextPhoto();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [lightboxIndex, closeLightbox, prevPhoto, nextPhoto]);
 
   useEffect(() => {
     if (!job) {
@@ -318,20 +347,20 @@ export default function JobDetailsDrawer({
               )}
               {(job.job_photos?.length ?? 0) > 0 && (
                 <div className="mt-2 flex gap-2 overflow-x-auto">
-                  {job.job_photos!.map((src) => (
-                    <a
+                  {job.job_photos!.map((src, i) => (
+                    <button
                       key={src}
-                      href={src}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="shrink-0"
+                      type="button"
+                      onClick={() => setLightboxIndex(i)}
+                      className="shrink-0 rounded-lg overflow-hidden border focus:outline-none focus:ring-2 focus:ring-primary"
+                      aria-label={`Open photo ${i + 1}`}
                     >
                       <img
                         src={src}
-                        alt="Job photo"
-                        className="h-20 w-20 rounded-lg object-cover border"
+                        alt={`Job photo ${i + 1}`}
+                        className="h-20 w-20 object-cover hover:opacity-90 transition-opacity"
                       />
-                    </a>
+                    </button>
                   ))}
                 </div>
               )}
@@ -390,6 +419,62 @@ export default function JobDetailsDrawer({
           )}
         </div>
       </SheetContent>
+      {lightboxIndex != null && photos[lightboxIndex] && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
+          onClick={closeLightbox}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photo viewer"
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              closeLightbox();
+            }}
+            className="absolute top-4 right-4 grid place-items-center w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            aria-label="Close"
+          >
+            <XIcon className="h-5 w-5" />
+          </button>
+          {photos.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  prevPhoto();
+                }}
+                className="absolute left-3 md:left-6 grid place-items-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                aria-label="Previous photo"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  nextPhoto();
+                }}
+                className="absolute right-3 md:right-6 grid place-items-center w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 text-white"
+                aria-label="Next photo"
+              >
+                <ChevronRight className="h-6 w-6" />
+              </button>
+            </>
+          )}
+          <img
+            src={photos[lightboxIndex]}
+            alt={`Job photo ${lightboxIndex + 1}`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
+          />
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/80 bg-black/40 px-3 py-1 rounded-full">
+            {lightboxIndex + 1} / {photos.length}
+          </div>
+        </div>
+      )}
     </Sheet>
   );
 }
