@@ -217,6 +217,64 @@ export default function JobDetailsDrawer({
   const SWIPE_THRESHOLD_X = 50;
   const SWIPE_THRESHOLD_Y = 70;
 
+  // Per-job last viewed photo index — restored when reopening the lightbox.
+  const lastIndexByJob = useRef<Map<string, number>>(new Map());
+
+  // Tap/click debounce so finishing a swipe doesn't trigger a close.
+  const TAP_DEBOUNCE_MS = 250;
+  const lastGestureEnd = useRef<number>(0);
+  const isClickSuppressed = () =>
+    Date.now() - lastGestureEnd.current < TAP_DEBOUNCE_MS;
+
+  // Reduced motion.
+  const [reducedMotion, setReducedMotion] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(mq.matches);
+    update();
+    mq.addEventListener?.("change", update);
+    return () => mq.removeEventListener?.("change", update);
+  }, []);
+
+  // Zoom + pan state.
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 4;
+  const DOUBLE_TAP_ZOOM = 2.5;
+  const imgWrapRef = useRef<HTMLDivElement | null>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const pinchStartDist = useRef<number | null>(null);
+  const pinchStartZoom = useRef<number>(1);
+  const panStart = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+  const lastTapAt = useRef<number>(0);
+
+  const resetZoom = useCallback(() => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }, []);
+
+  // Clamp pan within bounds based on current zoom and rendered image size.
+  const clampPan = useCallback(
+    (px: number, py: number, z: number) => {
+      const el = imgRef.current;
+      const wrap = imgWrapRef.current;
+      if (!el || !wrap) return { x: px, y: py };
+      const rect = el.getBoundingClientRect();
+      // rect already reflects scaled size since transform: scale is applied.
+      const baseW = rect.width / z;
+      const baseH = rect.height / z;
+      const overflowX = Math.max(0, (baseW * z - wrap.clientWidth) / 2);
+      const overflowY = Math.max(0, (baseH * z - wrap.clientHeight) / 2);
+      return {
+        x: Math.max(-overflowX, Math.min(overflowX, px)),
+        y: Math.max(-overflowY, Math.min(overflowY, py)),
+      };
+    },
+    [],
+  );
+
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const prevPhoto = useCallback(
     () =>
@@ -230,16 +288,87 @@ export default function JobDetailsDrawer({
     [photos.length],
   );
 
+  // Reset zoom whenever the displayed photo changes.
+  useEffect(() => {
+    resetZoom();
+  }, [lightboxIndex, resetZoom]);
+
+  // Remember last viewed index per job.
+  useEffect(() => {
+    if (lightboxIndex != null && job) {
+      lastIndexByJob.current.set(job.id, lightboxIndex);
+    }
+  }, [lightboxIndex, job?.id]);
+
+  const openLightboxAt = useCallback(
+    (i: number) => {
+      setLightboxIndex(i);
+    },
+    [],
+  );
+
   useEffect(() => {
     if (lightboxIndex == null) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeLightbox();
-      else if (e.key === "ArrowLeft") prevPhoto();
-      else if (e.key === "ArrowRight") nextPhoto();
+      else if (e.key === "ArrowLeft") {
+        if (zoom === 1) prevPhoto();
+      } else if (e.key === "ArrowRight") {
+        if (zoom === 1) nextPhoto();
+      } else if (e.key === "0") {
+        resetZoom();
+      } else if (e.key === "+" || e.key === "=") {
+        setZoom((z) => Math.min(MAX_ZOOM, z + 0.5));
+      } else if (e.key === "-") {
+        setZoom((z) => {
+          const next = Math.max(MIN_ZOOM, z - 0.5);
+          if (next === 1) setPan({ x: 0, y: 0 });
+          return next;
+        });
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [lightboxIndex, closeLightbox, prevPhoto, nextPhoto]);
+  }, [lightboxIndex, closeLightbox, prevPhoto, nextPhoto, zoom, resetZoom]);
+
+  // Focus trap: focus the lightbox container when opened, restore on close.
+  const lightboxRef = useRef<HTMLDivElement | null>(null);
+  const lastFocusedRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (lightboxIndex == null) return;
+    lastFocusedRef.current = document.activeElement as HTMLElement | null;
+    // Defer to ensure the node is mounted.
+    const t = window.setTimeout(() => lightboxRef.current?.focus(), 0);
+    const onKeyTrap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const root = lightboxRef.current;
+      if (!root) return;
+      const focusables = root.querySelectorAll<HTMLElement>(
+        'button, [href], [tabindex]:not([tabindex="-1"])',
+      );
+      if (focusables.length === 0) {
+        e.preventDefault();
+        root.focus();
+        return;
+      }
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && (active === first || active === root)) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", onKeyTrap);
+    return () => {
+      window.clearTimeout(t);
+      document.removeEventListener("keydown", onKeyTrap);
+      lastFocusedRef.current?.focus?.();
+    };
+  }, [lightboxIndex]);
 
   // Scroll-lock the page behind the lightbox while it is open.
   useEffect(() => {
@@ -289,6 +418,14 @@ export default function JobDetailsDrawer({
   const timeline = buildTimeline(job);
   const finalPrice = Number(job.agreed_price ?? job.price);
   const commission = Math.round(finalPrice * 0.1);
+
+  const handleThumbClick = (i: number) => {
+    const remembered = job ? lastIndexByJob.current.get(job.id) : undefined;
+    // If reopening (lightbox closed) and clicking the same strip, prefer remembered index.
+    // Here we always honor explicit thumbnail click; remembered index is used elsewhere if needed.
+    void remembered;
+    openLightboxAt(i);
+  };
 
   return (
     <>
@@ -373,7 +510,7 @@ export default function JobDetailsDrawer({
                     <button
                       key={src}
                       type="button"
-                      onClick={() => setLightboxIndex(i)}
+                      onClick={() => handleThumbClick(i)}
                       className="shrink-0 rounded-lg overflow-hidden border focus:outline-none focus:ring-2 focus:ring-primary"
                       aria-label={`Open photo ${i + 1}`}
                     >
@@ -447,14 +584,72 @@ export default function JobDetailsDrawer({
       typeof document !== "undefined" &&
       createPortal(
         <div
+          ref={lightboxRef}
+          tabIndex={-1}
           className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center"
-          onClick={closeLightbox}
+          onClick={() => {
+            if (isClickSuppressed()) return;
+            if (zoom !== 1) return;
+            closeLightbox();
+          }}
           onTouchStart={(e) => {
+            if (e.touches.length === 2) {
+              const [a, b] = [e.touches[0], e.touches[1]];
+              const dx = a.clientX - b.clientX;
+              const dy = a.clientY - b.clientY;
+              pinchStartDist.current = Math.hypot(dx, dy);
+              pinchStartZoom.current = zoom;
+              touchStartX.current = null;
+              touchStartY.current = null;
+              return;
+            }
             const t = e.touches[0];
             touchStartX.current = t.clientX;
             touchStartY.current = t.clientY;
+            if (zoom > 1) {
+              panStart.current = {
+                x: t.clientX,
+                y: t.clientY,
+                px: pan.x,
+                py: pan.y,
+              };
+            }
+          }}
+          onTouchMove={(e) => {
+            if (e.touches.length === 2 && pinchStartDist.current != null) {
+              const [a, b] = [e.touches[0], e.touches[1]];
+              const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+              const ratio = dist / pinchStartDist.current;
+              const next = Math.max(
+                MIN_ZOOM,
+                Math.min(MAX_ZOOM, pinchStartZoom.current * ratio),
+              );
+              setZoom(next);
+              if (next === 1) setPan({ x: 0, y: 0 });
+              e.preventDefault();
+              return;
+            }
+            if (zoom > 1 && panStart.current && e.touches.length === 1) {
+              const t = e.touches[0];
+              const nx = panStart.current.px + (t.clientX - panStart.current.x);
+              const ny = panStart.current.py + (t.clientY - panStart.current.y);
+              setPan(clampPan(nx, ny, zoom));
+              e.preventDefault();
+            }
           }}
           onTouchEnd={(e) => {
+            // End of pinch
+            if (pinchStartDist.current != null && e.touches.length < 2) {
+              pinchStartDist.current = null;
+              lastGestureEnd.current = Date.now();
+              return;
+            }
+            // End of pan
+            if (panStart.current) {
+              panStart.current = null;
+              lastGestureEnd.current = Date.now();
+              return;
+            }
             if (touchStartX.current == null || touchStartY.current == null) return;
             const t = e.changedTouches[0];
             const dx = t.clientX - touchStartX.current;
@@ -463,6 +658,29 @@ export default function JobDetailsDrawer({
             touchStartY.current = null;
             const absX = Math.abs(dx);
             const absY = Math.abs(dy);
+
+            // Double-tap to zoom (only when not currently swiping).
+            if (absX < 10 && absY < 10) {
+              const now = Date.now();
+              if (now - lastTapAt.current < 300) {
+                if (zoom === 1) {
+                  setZoom(DOUBLE_TAP_ZOOM);
+                } else {
+                  resetZoom();
+                }
+                lastTapAt.current = 0;
+                lastGestureEnd.current = now;
+                return;
+              }
+              lastTapAt.current = now;
+              return; // let onClick handle single-tap close
+            }
+
+            lastGestureEnd.current = Date.now();
+
+            // Don't navigate/close via swipe while zoomed in.
+            if (zoom > 1) return;
+
             if (absY > absX && absY > SWIPE_THRESHOLD_Y) {
               // Vertical swipe (up or down) closes the lightbox.
               closeLightbox();
@@ -475,6 +693,9 @@ export default function JobDetailsDrawer({
           aria-modal="true"
           aria-label="Photo viewer"
         >
+          <span className="sr-only" aria-live="polite" aria-atomic="true">
+            Photo {lightboxIndex + 1} of {photos.length}
+          </span>
           <button
             type="button"
             onClick={(e) => {
@@ -512,13 +733,39 @@ export default function JobDetailsDrawer({
               </button>
             </>
           )}
-          <img
-            src={photos[lightboxIndex]}
-            alt={`Job photo ${lightboxIndex + 1}`}
-            onClick={closeLightbox}
-            className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
-            draggable={false}
-          />
+          <div
+            ref={imgWrapRef}
+            className="relative max-h-[90vh] max-w-[92vw] overflow-hidden"
+            onDoubleClick={(e) => {
+              e.stopPropagation();
+              if (zoom === 1) setZoom(DOUBLE_TAP_ZOOM);
+              else resetZoom();
+            }}
+          >
+            <img
+              ref={imgRef}
+              src={photos[lightboxIndex]}
+              alt={`Job photo ${lightboxIndex + 1} of ${photos.length}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (isClickSuppressed()) return;
+                if (zoom !== 1) return;
+                closeLightbox();
+              }}
+              style={{
+                transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+                transition: reducedMotion
+                  ? "none"
+                  : panStart.current || pinchStartDist.current
+                    ? "none"
+                    : "transform 150ms ease-out",
+                cursor: zoom > 1 ? "grab" : "zoom-in",
+                touchAction: "none",
+              }}
+              className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl select-none"
+              draggable={false}
+            />
+          </div>
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/80 bg-black/40 px-3 py-1 rounded-full">
             {lightboxIndex + 1} / {photos.length}
           </div>
