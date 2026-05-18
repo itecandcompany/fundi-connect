@@ -213,6 +213,10 @@ export default function JobDetailsDrawer({
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
+  // Swipe thresholds (in CSS pixels). Tuned for consistent feel across devices.
+  const SWIPE_THRESHOLD_X = 50;
+  const SWIPE_THRESHOLD_Y = 70;
+
   const closeLightbox = useCallback(() => setLightboxIndex(null), []);
   const prevPhoto = useCallback(
     () =>
@@ -236,6 +240,20 @@ export default function JobDetailsDrawer({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [lightboxIndex, closeLightbox, prevPhoto, nextPhoto]);
+
+  // Scroll-lock the page behind the lightbox while it is open.
+  useEffect(() => {
+    if (lightboxIndex == null || typeof document === "undefined") return;
+    const { body } = document;
+    const prevOverflow = body.style.overflow;
+    const prevTouchAction = body.style.touchAction;
+    body.style.overflow = "hidden";
+    body.style.touchAction = "none";
+    return () => {
+      body.style.overflow = prevOverflow;
+      body.style.touchAction = prevTouchAction;
+    };
+  }, [lightboxIndex]);
 
   useEffect(() => {
     if (!job) {
@@ -443,7 +461,12 @@ export default function JobDetailsDrawer({
             const dy = t.clientY - touchStartY.current;
             touchStartX.current = null;
             touchStartY.current = null;
-            if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) && photos.length > 1) {
+            const absX = Math.abs(dx);
+            const absY = Math.abs(dy);
+            if (absY > absX && absY > SWIPE_THRESHOLD_Y) {
+              // Vertical swipe (up or down) closes the lightbox.
+              closeLightbox();
+            } else if (absX > SWIPE_THRESHOLD_X && absX > absY && photos.length > 1) {
               if (dx < 0) nextPhoto();
               else prevPhoto();
             }
@@ -492,8 +515,9 @@ export default function JobDetailsDrawer({
           <img
             src={photos[lightboxIndex]}
             alt={`Job photo ${lightboxIndex + 1}`}
-            onClick={(e) => e.stopPropagation()}
+            onClick={closeLightbox}
             className="max-h-[90vh] max-w-[92vw] object-contain rounded-lg shadow-2xl"
+            draggable={false}
           />
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-xs text-white/80 bg-black/40 px-3 py-1 rounded-full">
             {lightboxIndex + 1} / {photos.length}
