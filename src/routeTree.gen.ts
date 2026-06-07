@@ -13,7 +13,11 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AppServiceRouteImport } from './routes/app.service'
+import { Route as AppFindRouteImport } from './routes/app.find'
+import { Route as AppDescribeRouteImport } from './routes/app.describe'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
 import { Route as AdminJobsRouteImport } from './routes/admin.jobs'
 import { Route as AdminCatalogRouteImport } from './routes/admin.catalog'
@@ -38,10 +42,30 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppIndexRoute = AppIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppRoute,
+} as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const AppServiceRoute = AppServiceRouteImport.update({
+  id: '/service',
+  path: '/service',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFindRoute = AppFindRouteImport.update({
+  id: '/find',
+  path: '/find',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDescribeRoute = AppDescribeRouteImport.update({
+  id: '/describe',
+  path: '/describe',
+  getParentRoute: () => AppRoute,
 } as any)
 const AdminUsersRoute = AdminUsersRouteImport.update({
   id: '/users',
@@ -62,32 +86,43 @@ const AdminCatalogRoute = AdminCatalogRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/app/describe': typeof AppDescribeRoute
+  '/app/find': typeof AppFindRoute
+  '/app/service': typeof AppServiceRoute
   '/admin/': typeof AdminIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/app': typeof AppRoute
   '/auth': typeof AuthRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/app/describe': typeof AppDescribeRoute
+  '/app/find': typeof AppFindRoute
+  '/app/service': typeof AppServiceRoute
   '/admin': typeof AdminIndexRoute
+  '/app': typeof AppIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
-  '/app': typeof AppRoute
+  '/app': typeof AppRouteWithChildren
   '/auth': typeof AuthRoute
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/users': typeof AdminUsersRoute
+  '/app/describe': typeof AppDescribeRoute
+  '/app/find': typeof AppFindRoute
+  '/app/service': typeof AppServiceRoute
   '/admin/': typeof AdminIndexRoute
+  '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -99,16 +134,23 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/jobs'
     | '/admin/users'
+    | '/app/describe'
+    | '/app/find'
+    | '/app/service'
     | '/admin/'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/app'
     | '/auth'
     | '/admin/catalog'
     | '/admin/jobs'
     | '/admin/users'
+    | '/app/describe'
+    | '/app/find'
+    | '/app/service'
     | '/admin'
+    | '/app'
   id:
     | '__root__'
     | '/'
@@ -118,13 +160,17 @@ export interface FileRouteTypes {
     | '/admin/catalog'
     | '/admin/jobs'
     | '/admin/users'
+    | '/app/describe'
+    | '/app/find'
+    | '/app/service'
     | '/admin/'
+    | '/app/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
-  AppRoute: typeof AppRoute
+  AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
 }
 
@@ -158,12 +204,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/': {
+      id: '/app/'
+      path: '/'
+      fullPath: '/app/'
+      preLoaderRoute: typeof AppIndexRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/app/service': {
+      id: '/app/service'
+      path: '/service'
+      fullPath: '/app/service'
+      preLoaderRoute: typeof AppServiceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/find': {
+      id: '/app/find'
+      path: '/find'
+      fullPath: '/app/find'
+      preLoaderRoute: typeof AppFindRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/describe': {
+      id: '/app/describe'
+      path: '/describe'
+      fullPath: '/app/describe'
+      preLoaderRoute: typeof AppDescribeRouteImport
+      parentRoute: typeof AppRoute
     }
     '/admin/users': {
       id: '/admin/users'
@@ -205,21 +279,28 @@ const AdminRouteChildren: AdminRouteChildren = {
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
+interface AppRouteChildren {
+  AppDescribeRoute: typeof AppDescribeRoute
+  AppFindRoute: typeof AppFindRoute
+  AppServiceRoute: typeof AppServiceRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppDescribeRoute: AppDescribeRoute,
+  AppFindRoute: AppFindRoute,
+  AppServiceRoute: AppServiceRoute,
+  AppIndexRoute: AppIndexRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
-  AppRoute: AppRoute,
+  AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

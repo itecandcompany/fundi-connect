@@ -1,61 +1,69 @@
+# Multi-step client booking flow
 
-## Goal
-Transform FundiFast into a Bolt-like ride-hailing experience adapted for fundi services, with a new custom-quote workflow: client describes the problem (with photos), fundis chat to negotiate price, admin can set base problems/prices, and platform deducts 10% per completed job.
+Today `/app` shows the map and the booking sheet on top of each other. We'll break the client journey into discrete routes, each on its own page, so the user moves forward step by step.
 
-## Scope (this round)
+## New route structure
 
-### 1. Client experience — Bolt-style booking
-- Full-screen LiveMap stays as background; replace top filter strip with a draggable **bottom sheet** that morphs through stages:
-  1. **Idle** — service picker (chips), "Where's the problem?" input, photo attach, problem description, "Request fundi" CTA.
-  2. **Searching** — pulsing radar animation around user pin, "Finding nearby fundis…", cancel button.
-  3. **Quotes incoming** — list of fundis with photo, name, rating, distance, ETA, their proposed price, "Chat" + "Accept" actions.
-  4. **Accepted / On the way / Arrived / In progress** — fundi card (avatar, name, rating, vehicle/tools, ETA, distance), call + chat + cancel.
-  5. **Completed** — fare breakdown (agreed price − 10% platform fee shown to fundi side; client just sees total), rate stars + review.
+```text
+/auth                       (exists) login / signup
+/app/service                NEW  choose category (plumber, electrician, phone tech, …)
+/app/describe               NEW  describe the problem (text + optional photos)
+/app/find                   NEW  full-screen map of nearby fundis + "Request" button
+/app                        existing — becomes a redirector that sends the user
+                                 to the right step based on their state
+```
 
-### 2. Fundi experience — Bolt-driver style
-- Online/offline toggle (large, top of screen).
-- Incoming request modal with **countdown timer** (15s) showing client photo, problem description, photos, distance, suggested price → Accept / Reject / Counter-offer.
-- Active job sheet mirroring client stages with quick actions (Navigate, Call, Chat, Arrived, Start, Complete).
-- Earnings preview chip (today + this week, after 10% commission).
+All `/app/*` routes are gated: if the user isn't logged in, redirect to `/auth`.
 
-### 3. Custom-quote + chat
-- New `job_messages` table (job_id, sender_id, body, created_at) with realtime + RLS for participants.
-- New `job_quotes` table (job_id, fundi_id, price, note, status: pending/accepted/declined).
-- Job lifecycle adds `quoting` status before `accepted`.
-- In-app chat drawer accessible from active job and from quote cards.
+## Per-page contents
 
-### 4. Photos / attachments
-- New public `job-photos` storage bucket; client can attach up to 5 photos when posting job; fundi sees them in incoming request.
+**`/app/service` — Choose a category**
+- Grid of service cards (plumber, electrician, phone technician, …) sourced from `SERVICE_META` in `src/lib/geo.ts`.
+- Tapping a card stores the choice and routes to `/app/describe`.
 
-### 5. Admin: base problems & suggested prices
-- New `problem_templates` table (service, title, description, suggested_price, active). Admin role only can insert/update.
-- Client booking sheet shows quick-pick problem chips populated from this table for the chosen service.
-- Fundi sees template price as a starting suggestion in counter-offer.
+**`/app/describe` — Describe the problem**
+- Shows the selected service at the top with a "Change" link back to `/app/service`.
+- Textarea for the problem description (required, short min length).
+- Optional photo upload (reuses existing photo helpers in `src/lib/jobPhotos.ts`).
+- "Continue" button routes to `/app/find`.
+- "Back" returns to `/app/service`.
 
-### 6. Commission (10%)
-- Already in `transactions`. On `completed` status transition, write transaction row: amount = agreed price, commission = 10%, fundi_earnings = 90%. Show fundi earnings + commission breakdown on completion screen.
+**`/app/find` — Map + request**
+- Full-screen `LiveMap` showing the user and all available fundis for the chosen service (existing behaviour).
+- Bottom card (not a draggable sheet) shows: service, problem summary, nearest fundi count, and a primary "Request fundi" button.
+- Submitting creates the job (same logic that's in `BookingSheet` today) and then routes into the existing active-job tracking UI.
+- If an active job already exists, this page shows the live tracking view instead of the request card.
 
-## Visual direction
-FundiFast-branded Bolt-style: dark map, brand-primary accent buttons, pure-white rounded sheets with shadow-elegant, large rounded CTAs, generous padding, system-style typography pairing already in use. New tokens for sheet shadow + radar pulse animation in `src/styles.css`.
+**`/app` — Smart redirector**
+- No category chosen → `/app/service`
+- Category chosen, no description → `/app/describe`
+- Both chosen, no active job → `/app/find`
+- Active job exists → `/app/find` (tracking mode)
 
-## File plan
-- `supabase/migrations/...` — add `job_messages`, `job_quotes`, `problem_templates`, `job_photos` columns on `jobs` (text[] of URLs), storage bucket + policies, extend `job_status` enum with `quoting`.
-- `src/components/booking/BookingSheet.tsx` — client bottom sheet with all stages.
-- `src/components/booking/RadarPulse.tsx` — search animation overlay.
-- `src/components/booking/QuoteList.tsx`, `FundiCard.tsx`, `RatingDialog.tsx`.
-- `src/components/chat/JobChat.tsx` — realtime chat drawer.
-- `src/components/fundi/IncomingRequestModal.tsx`, `FundiOnlineToggle.tsx`, `EarningsChip.tsx`, restructured `FundiLivePanel.tsx`.
-- `src/components/admin/ProblemTemplatesAdmin.tsx` + `src/routes/admin.tsx` (admin-only route guarded by `has_role`).
-- Refactor `src/components/LiveMap.tsx` to expose minimal map and let `BookingSheet` drive interaction.
-- `src/lib/bookingStore.ts` — small Zustand-free reducer hook for booking state.
-- `src/styles.css` — radar keyframes, sheet shadow token.
+## State sharing between steps
 
-## Out of scope (this round, can follow up)
-- Real Google Distance Matrix integration (keeping current OSRM + Haversine ETA).
-- Push notifications beyond existing browser API.
-- Payments / payouts.
-- Map style swap to dark tiles (can do next iteration).
+A tiny client store (Zustand or a React context in `src/lib/bookingFlow.ts`) holds:
+- `service: ServiceKey | null`
+- `description: string`
+- `photoUrls: string[]`
 
-## Notes
-- Quietly fix the SSR `window is not defined` error encountered on `/app` while restructuring map/sheet components (guard browser-only code).
-- Keep existing realtime subscriptions (`jobs`, `job_locations`) intact and extend them for `job_messages` + `job_quotes`.
+Persisted to `sessionStorage` so a refresh mid-flow doesn't lose progress. Cleared after a job is successfully created.
+
+## Files to add / change
+
+- Add `src/lib/bookingFlow.ts` — flow store + helpers.
+- Add `src/routes/app.service.tsx` — category picker.
+- Add `src/routes/app.describe.tsx` — problem description + photos.
+- Add `src/routes/app.find.tsx` — map + request card (extracts job-creation logic from `BookingSheet`).
+- Edit `src/routes/app.tsx` — becomes the redirector / fundi-home shell (the fundi side stays as-is).
+- Edit `src/components/LiveMap.tsx` — accept a prop for "request mode" so the embedded `BookingSheet` isn't auto-mounted on `/app/find` (the new bottom card replaces it).
+- Keep the fundi role's existing `/app` view (FundiLivePanel) untouched — only the client flow changes.
+
+## Out of scope
+
+- No backend / schema changes.
+- No changes to admin routes.
+- No changes to the fundi-side experience.
+- Lightbox / drawer work from prior turns is untouched.
+
+After you approve, I'll implement and verify the build.
