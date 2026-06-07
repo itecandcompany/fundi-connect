@@ -280,6 +280,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCatalogRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/fundi/setup': {
+      id: '/fundi/setup'
+      path: '/fundi/setup'
+      fullPath: '/fundi/setup'
+      preLoaderRoute: typeof FundiSetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
