@@ -15,6 +15,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as FundiSetupRouteImport } from './routes/fundi.setup'
 import { Route as AppServiceRouteImport } from './routes/app.service'
 import { Route as AppFindRouteImport } from './routes/app.find'
 import { Route as AppDescribeRouteImport } from './routes/app.describe'
@@ -51,6 +52,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AdminRoute,
+} as any)
+const FundiSetupRoute = FundiSetupRouteImport.update({
+  id: '/fundi/setup',
+  path: '/fundi/setup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppServiceRoute = AppServiceRouteImport.update({
   id: '/service',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
   '/app/service': typeof AppServiceRoute
+  '/fundi/setup': typeof FundiSetupRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
 }
@@ -106,6 +113,7 @@ export interface FileRoutesByTo {
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
   '/app/service': typeof AppServiceRoute
+  '/fundi/setup': typeof FundiSetupRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
 }
@@ -121,6 +129,7 @@ export interface FileRoutesById {
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
   '/app/service': typeof AppServiceRoute
+  '/fundi/setup': typeof FundiSetupRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
 }
@@ -137,6 +146,7 @@ export interface FileRouteTypes {
     | '/app/describe'
     | '/app/find'
     | '/app/service'
+    | '/fundi/setup'
     | '/admin/'
     | '/app/'
   fileRoutesByTo: FileRoutesByTo
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/app/describe'
     | '/app/find'
     | '/app/service'
+    | '/fundi/setup'
     | '/admin'
     | '/app'
   id:
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/app/describe'
     | '/app/find'
     | '/app/service'
+    | '/fundi/setup'
     | '/admin/'
     | '/app/'
   fileRoutesById: FileRoutesById
@@ -172,6 +184,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
   AuthRoute: typeof AuthRoute
+  FundiSetupRoute: typeof FundiSetupRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -217,6 +230,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/fundi/setup': {
+      id: '/fundi/setup'
+      path: '/fundi/setup'
+      fullPath: '/fundi/setup'
+      preLoaderRoute: typeof FundiSetupRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/app/service': {
       id: '/app/service'
@@ -300,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
   AuthRoute: AuthRoute,
+  FundiSetupRoute: FundiSetupRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
