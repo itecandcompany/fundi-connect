@@ -67,9 +67,13 @@ function CenterOn({ pos }: { pos: [number, number] | null }) {
 export default function LiveMap({
   service,
   setService,
+  hideIdleSheet = false,
+  onActiveJobChange,
 }: {
   service: ServiceKey;
   setService: (s: ServiceKey) => void;
+  hideIdleSheet?: boolean;
+  onActiveJobChange?: (job: ActiveJob | null) => void;
 }) {
   const { user } = useAuth();
   const [pos, setPos] = useState<[number, number] | null>(null);
@@ -322,6 +326,7 @@ export default function LiveMap({
   const activeJobRef = useRef<ActiveJob | null>(null);
   useEffect(() => {
     activeJobRef.current = activeJob;
+    onActiveJobChange?.(activeJob);
   }, [activeJob]);
 
   // Look up fundi profile for active job
@@ -416,17 +421,19 @@ export default function LiveMap({
         )}
       </MapContainer>
 
-      <BookingSheet
-        service={service}
-        setService={setService}
-        pos={pos}
-        activeJob={activeJob as unknown as Parameters<typeof BookingSheet>[0]["activeJob"]}
-        onOpenChat={(jobId, title) => setChat({ jobId, title })}
-        onClose={() => {
-          setActiveJob(null);
-          setReverseTrack(false);
-        }}
-      />
+      {(!hideIdleSheet || activeJob) && (
+        <BookingSheet
+          service={service}
+          setService={setService}
+          pos={pos}
+          activeJob={activeJob as unknown as Parameters<typeof BookingSheet>[0]["activeJob"]}
+          onOpenChat={(jobId, title) => setChat({ jobId, title })}
+          onClose={() => {
+            setActiveJob(null);
+            setReverseTrack(false);
+          }}
+        />
+      )}
       <JobChat
         jobId={chat?.jobId ?? null}
         open={!!chat}
