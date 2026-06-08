@@ -681,8 +681,53 @@ export default function BookingSheet({
             <X className="h-4 w-4" /> Cancel
           </Button>
         </div>
+
+        {(activeJob.before_photos?.length || activeJob.after_photos?.length || activeJob.started_at) && (
+          <div className="mt-4 rounded-xl border bg-muted/30 p-3 space-y-3">
+            {activeJob.started_at && (
+              <WorkTimer startedAt={activeJob.started_at} />
+            )}
+            {activeJob.before_photos && activeJob.before_photos.length > 0 && (
+              <ProofRow label="Before" urls={activeJob.before_photos} />
+            )}
+            {activeJob.after_photos && activeJob.after_photos.length > 0 && (
+              <ProofRow label="After" urls={activeJob.after_photos} />
+            )}
+          </div>
+        )}
       </div>
     </Shell>
+  );
+}
+
+function WorkTimer({ startedAt }: { startedAt: string }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const mins = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 60000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return (
+    <div className="text-xs text-muted-foreground">
+      Work in progress · {h > 0 ? `${h}h ` : ""}{m}m elapsed
+    </div>
+  );
+}
+
+function ProofRow({ label, urls }: { label: string; urls: string[] }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase text-muted-foreground mb-1">{label}</div>
+      <div className="flex gap-2 overflow-x-auto scrollbar-none">
+        {urls.map((u, i) => (
+          <a key={i} href={u} target="_blank" rel="noreferrer">
+            <img src={u} alt="" className="h-16 w-16 object-cover rounded-lg border" />
+          </a>
+        ))}
+      </div>
+    </div>
   );
 }
 
