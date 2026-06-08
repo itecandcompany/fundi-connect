@@ -662,6 +662,16 @@ export default function FundiLivePanel() {
         }}
         title={active && chatJobId === active.id ? clientName : "Chat with client"}
       />
+      {active && proofMode && user && (
+        <ProofOfWorkDialog
+          open
+          mode={proofMode}
+          userId={user.id}
+          jobId={active.id}
+          onClose={() => setProofMode(null)}
+          onSubmit={submitProof}
+        />
+      )}
     </div>
   );
 }
