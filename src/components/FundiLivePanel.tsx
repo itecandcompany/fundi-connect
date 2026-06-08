@@ -363,17 +363,19 @@ export default function FundiLivePanel() {
   const submitProof = async (result: ProofResult) => {
     if (!active || !proofMode) return;
     const now = new Date().toISOString();
-    const patch: Record<string, unknown> = {};
-    if (proofMode === "start") {
-      patch.status = "in_progress";
-      patch.started_at = now;
-      patch.before_photos = [...(active.before_photos ?? []), ...result.photoUrls];
-    } else {
-      patch.status = "completed";
-      patch.completed_at = now;
-      patch.after_photos = [...(active.after_photos ?? []), ...result.photoUrls];
-      if (result.signatureUrl) patch.signature_url = result.signatureUrl;
-    }
+    const patch =
+      proofMode === "start"
+        ? {
+            status: "in_progress" as JobStatus,
+            started_at: now,
+            before_photos: [...(active.before_photos ?? []), ...result.photoUrls],
+          }
+        : {
+            status: "completed" as JobStatus,
+            completed_at: now,
+            after_photos: [...(active.after_photos ?? []), ...result.photoUrls],
+            signature_url: result.signatureUrl ?? null,
+          };
     const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
     if (error) {
       toast.error(error.message);
