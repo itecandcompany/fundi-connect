@@ -77,6 +77,10 @@ type ActiveJob = {
   client_lng: number;
   fundi_lat: number | null;
   fundi_lng: number | null;
+  started_at?: string | null;
+  before_photos?: string[];
+  after_photos?: string[];
+  signature_url?: string | null;
 };
 
 const STAGE_LABEL: Record<ActiveJob["status"], string> = {
