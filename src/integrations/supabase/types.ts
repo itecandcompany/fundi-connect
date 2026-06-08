@@ -144,8 +144,10 @@ export type Database = {
       }
       jobs: {
         Row: {
+          after_photos: string[]
           agreed_price: number | null
           arrived_at: string | null
+          before_photos: string[]
           cancellation_reason: string | null
           cancelled_at: string | null
           cancelled_by: string | null
@@ -167,12 +169,16 @@ export type Database = {
           problem_description: string | null
           problem_title: string | null
           service: Database["public"]["Enums"]["service_type"]
+          signature_url: string | null
+          started_at: string | null
           status: Database["public"]["Enums"]["job_status"]
           updated_at: string
         }
         Insert: {
+          after_photos?: string[]
           agreed_price?: number | null
           arrived_at?: string | null
+          before_photos?: string[]
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -194,12 +200,16 @@ export type Database = {
           problem_description?: string | null
           problem_title?: string | null
           service: Database["public"]["Enums"]["service_type"]
+          signature_url?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
         Update: {
+          after_photos?: string[]
           agreed_price?: number | null
           arrived_at?: string | null
+          before_photos?: string[]
           cancellation_reason?: string | null
           cancelled_at?: string | null
           cancelled_by?: string | null
@@ -221,6 +231,8 @@ export type Database = {
           problem_description?: string | null
           problem_title?: string | null
           service?: Database["public"]["Enums"]["service_type"]
+          signature_url?: string | null
+          started_at?: string | null
           status?: Database["public"]["Enums"]["job_status"]
           updated_at?: string
         }
