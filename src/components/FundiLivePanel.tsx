@@ -351,11 +351,8 @@ export default function FundiLivePanel() {
       setProofMode("complete");
       return;
     }
-    const patch: { status: JobStatus; completed_at?: string; arrived_at?: string } = {
-      status: step.next,
-    };
+    const patch: { status: JobStatus; arrived_at?: string } = { status: step.next };
     if (step.next === "arrived") patch.arrived_at = new Date().toISOString();
-    if (step.next === "completed") patch.completed_at = new Date().toISOString();
     const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
     if (error) toast.error(error.message);
   };
