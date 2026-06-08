@@ -25,6 +25,7 @@ import {
 } from "@/lib/geo";
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
 import JobChat from "./chat/JobChat";
+import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
 
 type JobStatus =
   | "searching"
@@ -49,6 +50,10 @@ type Job = {
   problem_title: string | null;
   problem_description: string | null;
   job_photos: string[];
+  before_photos?: string[];
+  after_photos?: string[];
+  started_at?: string | null;
+  signature_url?: string | null;
   cancellation_reason?: string | null;
   cancelled_by?: string | null;
   cancelled_at?: string | null;
@@ -77,6 +82,7 @@ export default function FundiLivePanel() {
   const [quoteNote, setQuoteNote] = useState("");
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [myQuoteIds, setMyQuoteIds] = useState<Record<string, string>>({});
+  const [proofMode, setProofMode] = useState<ProofMode | null>(null);
   const watchRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -336,6 +342,15 @@ export default function FundiLivePanel() {
         return;
       }
     }
+    // Proof-of-work gates
+    if (step.next === "in_progress") {
+      setProofMode("start");
+      return;
+    }
+    if (step.next === "completed") {
+      setProofMode("complete");
+      return;
+    }
     const patch: { status: JobStatus; completed_at?: string; arrived_at?: string } = {
       status: step.next,
     };
@@ -343,6 +358,29 @@ export default function FundiLivePanel() {
     if (step.next === "completed") patch.completed_at = new Date().toISOString();
     const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
     if (error) toast.error(error.message);
+  };
+
+  const submitProof = async (result: ProofResult) => {
+    if (!active || !proofMode) return;
+    const now = new Date().toISOString();
+    const patch: Record<string, unknown> = {};
+    if (proofMode === "start") {
+      patch.status = "in_progress";
+      patch.started_at = now;
+      patch.before_photos = [...(active.before_photos ?? []), ...result.photoUrls];
+    } else {
+      patch.status = "completed";
+      patch.completed_at = now;
+      patch.after_photos = [...(active.after_photos ?? []), ...result.photoUrls];
+      if (result.signatureUrl) patch.signature_url = result.signatureUrl;
+    }
+    const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    setProofMode(null);
+    toast.success(proofMode === "start" ? "Job started" : "Job completed");
   };
 
   const cancelActive = async () => {
