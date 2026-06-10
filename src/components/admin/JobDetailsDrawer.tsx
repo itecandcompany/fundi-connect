@@ -211,6 +211,9 @@ export default function JobDetailsDrawer({
   const [canceller, setCanceller] = useState<Profile | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const photos = job?.job_photos ?? [];
+  const lightboxSrc = useSignedJobPhotoUrl(
+    lightboxIndex !== null ? photos[lightboxIndex] : null,
+  );
   const touchStartX = useRef<number | null>(null);
   const touchStartY = useRef<number | null>(null);
 
@@ -745,7 +748,7 @@ export default function JobDetailsDrawer({
           >
             <img
               ref={imgRef}
-              src={photos[lightboxIndex]}
+              src={lightboxSrc ?? undefined}
               alt={`Job photo ${lightboxIndex + 1} of ${photos.length}`}
               onClick={(e) => {
                 e.stopPropagation();
