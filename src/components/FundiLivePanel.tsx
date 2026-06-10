@@ -26,6 +26,7 @@ import {
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
 import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
+import SignedImage from "@/components/SignedImage";
 
 type JobStatus =
   | "searching"
@@ -465,7 +466,7 @@ export default function FundiLivePanel() {
           {active.job_photos?.length > 0 && (
             <div className="flex gap-2 overflow-x-auto scrollbar-none">
               {active.job_photos.map((url, i) => (
-                <img key={i} src={url} alt="" className="h-20 w-20 object-cover rounded-lg border" />
+                <SignedImage key={i} src={url} alt="" className="h-20 w-20 object-cover rounded-lg border" />
               ))}
             </div>
           )}
@@ -558,7 +559,7 @@ export default function FundiLivePanel() {
                     {j.job_photos?.length > 0 && (
                       <div className="flex gap-1 overflow-x-auto scrollbar-none">
                         {j.job_photos.map((u, i) => (
-                          <img
+                          <SignedImage
                             key={i}
                             src={u}
                             alt=""
