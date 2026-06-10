@@ -27,6 +27,7 @@ import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/pus
 import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
 import SignedImage from "@/components/SignedImage";
+import FundiMap from "@/components/FundiMap";
 
 type JobStatus =
   | "searching"
