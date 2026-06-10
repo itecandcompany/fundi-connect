@@ -27,6 +27,7 @@ import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/pus
 import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
 import SignedImage from "@/components/SignedImage";
+import FundiMap from "@/components/FundiMap";
 
 type JobStatus =
   | "searching"
@@ -421,6 +422,16 @@ export default function FundiLivePanel() {
         </div>
         <Switch checked={available} onCheckedChange={toggleAvailable} className="scale-125" />
       </Card>
+
+      {/* Live map */}
+      {(available || active) && (
+        <FundiMap
+          pos={pos}
+          active={active}
+          requests={incoming}
+          height={active ? 280 : 220}
+        />
+      )}
 
       {/* Earnings chip */}
       <div className="grid grid-cols-2 gap-3">
