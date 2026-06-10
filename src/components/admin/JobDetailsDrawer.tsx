@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { SERVICE_META, formatTsh, type ServiceKey } from "@/lib/geo";
+import SignedImage from "@/components/SignedImage";
 import {
   Search,
   MessageSquareQuote,
@@ -514,7 +515,7 @@ export default function JobDetailsDrawer({
                       className="shrink-0 rounded-lg overflow-hidden border focus:outline-none focus:ring-2 focus:ring-primary"
                       aria-label={`Open photo ${i + 1}`}
                     >
-                      <img
+                      <SignedImage
                         src={src}
                         alt={`Job photo ${i + 1}`}
                         className="h-20 w-20 object-cover hover:opacity-90 transition-opacity"

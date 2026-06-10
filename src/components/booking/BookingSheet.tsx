@@ -13,6 +13,7 @@ import {
 } from "@/lib/geo";
 import { uploadJobPhotos } from "@/lib/jobPhotos";
 import RadarPulse from "./RadarPulse";
+import SignedImage from "@/components/SignedImage";
 import {
   Camera,
   ChevronUp,
