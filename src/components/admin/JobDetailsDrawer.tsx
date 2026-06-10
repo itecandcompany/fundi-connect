@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
 import { SERVICE_META, formatTsh, type ServiceKey } from "@/lib/geo";
-import SignedImage from "@/components/SignedImage";
+import SignedImage, { useSignedJobPhotoUrl } from "@/components/SignedImage";
 import {
   Search,
   MessageSquareQuote,
