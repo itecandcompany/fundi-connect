@@ -722,9 +722,7 @@ function ProofRow({ label, urls }: { label: string; urls: string[] }) {
       <div className="text-[10px] uppercase text-muted-foreground mb-1">{label}</div>
       <div className="flex gap-2 overflow-x-auto scrollbar-none">
         {urls.map((u, i) => (
-          <a key={i} href={u} target="_blank" rel="noreferrer">
-            <img src={u} alt="" className="h-16 w-16 object-cover rounded-lg border" />
-          </a>
+          <SignedImage key={i} src={u} alt="" className="h-16 w-16 object-cover rounded-lg border" />
         ))}
       </div>
     </div>
