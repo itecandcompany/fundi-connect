@@ -423,6 +423,16 @@ export default function FundiLivePanel() {
         <Switch checked={available} onCheckedChange={toggleAvailable} className="scale-125" />
       </Card>
 
+      {/* Live map */}
+      {(available || active) && (
+        <FundiMap
+          pos={pos}
+          active={active}
+          requests={incoming}
+          height={active ? 280 : 220}
+        />
+      )}
+
       {/* Earnings chip */}
       <div className="grid grid-cols-2 gap-3">
         <Card className="p-3 flex items-center gap-3">
