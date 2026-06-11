@@ -27,6 +27,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import JobReceiptDialog from "@/components/JobReceiptDialog";
 
 type ProblemTemplate = {
   id: string;
@@ -126,6 +127,7 @@ export default function BookingSheet({
   const [activeFundi, setActiveFundi] = useState<FundiProfile | null>(null);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch templates for current service
@@ -325,7 +327,7 @@ export default function BookingSheet({
       review: review.trim() || null,
     });
     toast.success("Thanks for the feedback");
-    onClose();
+    setReceiptOpen(true);
   };
 
   // ----- RENDER -----
