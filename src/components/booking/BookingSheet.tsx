@@ -27,6 +27,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { toast } from "sonner";
+import JobReceiptDialog from "@/components/JobReceiptDialog";
 
 type ProblemTemplate = {
   id: string;
@@ -126,6 +127,7 @@ export default function BookingSheet({
   const [activeFundi, setActiveFundi] = useState<FundiProfile | null>(null);
   const [rating, setRating] = useState(0);
   const [review, setReview] = useState("");
+  const [receiptOpen, setReceiptOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch templates for current service
@@ -325,7 +327,7 @@ export default function BookingSheet({
       review: review.trim() || null,
     });
     toast.success("Thanks for the feedback");
-    onClose();
+    setReceiptOpen(true);
   };
 
   // ----- RENDER -----
@@ -601,8 +603,12 @@ export default function BookingSheet({
               className="mt-3"
             />
             <div className="flex gap-2 mt-3">
-              <Button variant="outline" className="flex-1" onClick={onClose}>
-                Skip
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setReceiptOpen(true)}
+              >
+                View receipt
               </Button>
               <Button className="flex-1" onClick={submitRating} disabled={rating === 0}>
                 Submit
@@ -610,6 +616,15 @@ export default function BookingSheet({
             </div>
           </div>
         </div>
+        <JobReceiptDialog
+          jobId={activeJob.id}
+          open={receiptOpen}
+          onOpenChange={(o) => {
+            setReceiptOpen(o);
+            if (!o) onClose();
+          }}
+          role="client"
+        />
       </Shell>
     );
   }

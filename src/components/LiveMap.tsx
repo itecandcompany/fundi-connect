@@ -266,7 +266,10 @@ export default function LiveMap({
               arrived: "Fundi has arrived",
               in_progress: "Job started",
             };
-            if (map[row.status]) toast.message(map[row.status]);
+            if (map[row.status]) {
+              toast.message(map[row.status]);
+              sendBrowserNotification(map[row.status], "Open the app for details");
+            }
           }
         },
       )

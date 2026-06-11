@@ -16,6 +16,7 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import JobReceiptDialog from "@/components/JobReceiptDialog";
 import {
   SERVICE_META,
   ARRIVAL_RADIUS_M,
@@ -85,7 +86,10 @@ export default function FundiLivePanel() {
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [myQuoteIds, setMyQuoteIds] = useState<Record<string, string>>({});
   const [proofMode, setProofMode] = useState<ProofMode | null>(null);
+  const [receiptJobId, setReceiptJobId] = useState<string | null>(null);
   const watchRef = useRef<number | null>(null);
+  const incomingIdsRef = useRef<Set<string>>(new Set());
+  const activeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (available) ensureNotificationPermission();
@@ -205,11 +209,24 @@ export default function FundiLivePanel() {
             if (row.status === "completed") {
               loadEarnings();
               toast.success("Job complete — earnings updated");
+              sendBrowserNotification("Job completed", "Earnings have been updated");
+              setReceiptJobId(row.id);
             }
             setActive((prev) => (prev?.id === row.id ? null : prev));
             return;
           }
+          // Detect newly assigned job
+          if (!activeIdRef.current || activeIdRef.current !== row.id) {
+            if (row.status === "accepted") {
+              toast.success("Client accepted your quote 🎉");
+              sendBrowserNotification(
+                "Quote accepted",
+                `${row.problem_title || "New job"} is yours — head over!`,
+              );
+            }
+          }
           setActive(row);
+          activeIdRef.current = row.id;
         },
       )
       .subscribe();
@@ -255,7 +272,24 @@ export default function FundiLivePanel() {
         .order("created_at", { ascending: false })
         .limit(15);
       if (cancelled) return;
-      setIncoming((data as Job[]) ?? []);
+      const rows = (data as Job[]) ?? [];
+      // Detect new incoming requests since last poll
+      const prev = incomingIdsRef.current;
+      if (prev.size > 0) {
+        const fresh = rows.filter((r) => !prev.has(r.id));
+        if (fresh.length > 0) {
+          const f = fresh[0];
+          toast.message("New job request nearby", {
+            description: f.problem_title || SERVICE_META[f.service].label,
+          });
+          sendBrowserNotification(
+            `New ${SERVICE_META[f.service].label} request`,
+            f.problem_title || "Tap to send a quote",
+          );
+        }
+      }
+      incomingIdsRef.current = new Set(rows.map((r) => r.id));
+      setIncoming(rows);
       // Also load my own quote ids per job
       const ids = (data ?? []).map((d) => d.id);
       if (ids.length) {
@@ -684,6 +718,12 @@ export default function FundiLivePanel() {
           onSubmit={submitProof}
         />
       )}
+      <JobReceiptDialog
+        jobId={receiptJobId}
+        open={!!receiptJobId}
+        onOpenChange={(o) => !o && setReceiptJobId(null)}
+        role="fundi"
+      />
     </div>
   );
 }

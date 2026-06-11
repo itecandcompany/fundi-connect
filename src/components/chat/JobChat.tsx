@@ -4,9 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
+import { Send, Check, CheckCheck } from "lucide-react";
 
-type Msg = { id: string; sender_id: string; body: string; created_at: string };
+type Msg = { id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
 
 export default function JobChat({
   jobId,
@@ -30,7 +30,7 @@ export default function JobChat({
     let cancelled = false;
     supabase
       .from("job_messages")
-      .select("id, sender_id, body, created_at")
+      .select("id, sender_id, body, created_at, read_at")
       .eq("job_id", jobId)
       .order("created_at", { ascending: true })
       .then(({ data }) => !cancelled && setMsgs((data as Msg[]) ?? []));
@@ -38,8 +38,17 @@ export default function JobChat({
       .channel(`chat-${jobId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "job_messages", filter: `job_id=eq.${jobId}` },
-        (p) => setMsgs((prev) => [...prev, p.new as Msg]),
+        { event: "*", schema: "public", table: "job_messages", filter: `job_id=eq.${jobId}` },
+        (p) => {
+          if (p.eventType === "INSERT") {
+            setMsgs((prev) =>
+              prev.some((m) => m.id === (p.new as Msg).id) ? prev : [...prev, p.new as Msg],
+            );
+          } else if (p.eventType === "UPDATE") {
+            const n = p.new as Msg;
+            setMsgs((prev) => prev.map((m) => (m.id === n.id ? { ...m, ...n } : m)));
+          }
+        },
       )
       .subscribe();
     return () => {
@@ -51,6 +60,24 @@ export default function JobChat({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs.length]);
+
+  // Mark incoming unread messages as read whenever the sheet is open
+  useEffect(() => {
+    if (!jobId || !open || !user) return;
+    const unread = msgs.filter((m) => m.sender_id !== user.id && !m.read_at).map((m) => m.id);
+    if (unread.length === 0) return;
+    const stamp = new Date().toISOString();
+    supabase
+      .from("job_messages")
+      .update({ read_at: stamp })
+      .in("id", unread)
+      .then(({ error }) => {
+        if (error) return;
+        setMsgs((prev) =>
+          prev.map((m) => (unread.includes(m.id) ? { ...m, read_at: stamp } : m)),
+        );
+      });
+  }, [jobId, open, user?.id, msgs]);
 
   const send = async () => {
     const body = text.trim();
@@ -86,7 +113,16 @@ export default function JobChat({
                       : "bg-muted text-foreground rounded-bl-sm"
                   }`}
                 >
-                  {m.body}
+                  <div>{m.body}</div>
+                  {mine && (
+                    <div className="flex justify-end mt-0.5 opacity-80">
+                      {m.read_at ? (
+                        <CheckCheck className="h-3 w-3" />
+                      ) : (
+                        <Check className="h-3 w-3" />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             );
