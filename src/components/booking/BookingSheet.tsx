@@ -603,8 +603,12 @@ export default function BookingSheet({
               className="mt-3"
             />
             <div className="flex gap-2 mt-3">
-              <Button variant="outline" className="flex-1" onClick={onClose}>
-                Skip
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setReceiptOpen(true)}
+              >
+                View receipt
               </Button>
               <Button className="flex-1" onClick={submitRating} disabled={rating === 0}>
                 Submit
@@ -612,6 +616,15 @@ export default function BookingSheet({
             </div>
           </div>
         </div>
+        <JobReceiptDialog
+          jobId={activeJob.id}
+          open={receiptOpen}
+          onOpenChange={(o) => {
+            setReceiptOpen(o);
+            if (!o) onClose();
+          }}
+          role="client"
+        />
       </Shell>
     );
   }
