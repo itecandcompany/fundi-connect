@@ -718,6 +718,12 @@ export default function FundiLivePanel() {
           onSubmit={submitProof}
         />
       )}
+      <JobReceiptDialog
+        jobId={receiptJobId}
+        open={!!receiptJobId}
+        onOpenChange={(o) => !o && setReceiptJobId(null)}
+        role="fundi"
+      />
     </div>
   );
 }
