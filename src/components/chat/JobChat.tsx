@@ -4,9 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
+import { Send, Check, CheckCheck } from "lucide-react";
 
-type Msg = { id: string; sender_id: string; body: string; created_at: string };
+type Msg = { id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
 
 export default function JobChat({
   jobId,
@@ -30,7 +30,7 @@ export default function JobChat({
     let cancelled = false;
     supabase
       .from("job_messages")
-      .select("id, sender_id, body, created_at")
+      .select("id, sender_id, body, created_at, read_at")
       .eq("job_id", jobId)
       .order("created_at", { ascending: true })
       .then(({ data }) => !cancelled && setMsgs((data as Msg[]) ?? []));
@@ -38,7 +38,7 @@ export default function JobChat({
       .channel(`chat-${jobId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "job_messages", filter: `job_id=eq.${jobId}` },
+        { event: "*", schema: "public", table: "job_messages", filter: `job_id=eq.${jobId}` },
         (p) => setMsgs((prev) => [...prev, p.new as Msg]),
       )
       .subscribe();
