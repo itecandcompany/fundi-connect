@@ -268,7 +268,7 @@ export default function LiveMap({
             };
             if (map[row.status]) {
               toast.message(map[row.status]);
-              sendBrowserNotification(map[row.status], row.problem_title || "Open the app for details");
+              sendBrowserNotification(map[row.status], "Open the app for details");
             }
           }
         },
