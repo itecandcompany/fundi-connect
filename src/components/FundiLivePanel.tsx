@@ -16,6 +16,7 @@ import {
   Star,
 } from "lucide-react";
 import { toast } from "sonner";
+import JobReceiptDialog from "@/components/JobReceiptDialog";
 import {
   SERVICE_META,
   ARRIVAL_RADIUS_M,
@@ -85,7 +86,10 @@ export default function FundiLivePanel() {
   const [submittingQuote, setSubmittingQuote] = useState(false);
   const [myQuoteIds, setMyQuoteIds] = useState<Record<string, string>>({});
   const [proofMode, setProofMode] = useState<ProofMode | null>(null);
+  const [receiptJobId, setReceiptJobId] = useState<string | null>(null);
   const watchRef = useRef<number | null>(null);
+  const incomingIdsRef = useRef<Set<string>>(new Set());
+  const activeIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (available) ensureNotificationPermission();
@@ -205,11 +209,24 @@ export default function FundiLivePanel() {
             if (row.status === "completed") {
               loadEarnings();
               toast.success("Job complete — earnings updated");
+              sendBrowserNotification("Job completed", "Earnings have been updated");
+              setReceiptJobId(row.id);
             }
             setActive((prev) => (prev?.id === row.id ? null : prev));
             return;
           }
+          // Detect newly assigned job
+          if (!activeIdRef.current || activeIdRef.current !== row.id) {
+            if (row.status === "accepted") {
+              toast.success("Client accepted your quote 🎉");
+              sendBrowserNotification(
+                "Quote accepted",
+                `${row.problem_title || "New job"} is yours — head over!`,
+              );
+            }
+          }
           setActive(row);
+          activeIdRef.current = row.id;
         },
       )
       .subscribe();
