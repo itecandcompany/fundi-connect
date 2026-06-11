@@ -272,7 +272,24 @@ export default function FundiLivePanel() {
         .order("created_at", { ascending: false })
         .limit(15);
       if (cancelled) return;
-      setIncoming((data as Job[]) ?? []);
+      const rows = (data as Job[]) ?? [];
+      // Detect new incoming requests since last poll
+      const prev = incomingIdsRef.current;
+      if (prev.size > 0) {
+        const fresh = rows.filter((r) => !prev.has(r.id));
+        if (fresh.length > 0) {
+          const f = fresh[0];
+          toast.message("New job request nearby", {
+            description: f.problem_title || SERVICE_META[f.service].label,
+          });
+          sendBrowserNotification(
+            `New ${SERVICE_META[f.service].label} request`,
+            f.problem_title || "Tap to send a quote",
+          );
+        }
+      }
+      incomingIdsRef.current = new Set(rows.map((r) => r.id));
+      setIncoming(rows);
       // Also load my own quote ids per job
       const ids = (data ?? []).map((d) => d.id);
       if (ids.length) {
