@@ -413,6 +413,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      list_open_jobs_for_fundi: {
+        Args: never
+        Returns: {
+          agreed_price: number
+          client_id: string
+          client_lat: number
+          client_lng: number
+          created_at: string
+          fundi_id: string
+          id: string
+          job_photos: string[]
+          price: number
+          problem_description: string
+          problem_title: string
+          service: string
+          status: string
+        }[]
+      }
     }
     Enums: {
       app_role: "client" | "fundi" | "admin"
