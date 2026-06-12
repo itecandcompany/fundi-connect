@@ -264,13 +264,7 @@ export default function FundiLivePanel() {
         .eq("id", user.id)
         .maybeSingle();
       if (!me || cancelled) return;
-      const { data } = await supabase
-        .from("jobs")
-        .select("*")
-        .in("status", ["searching", "quoting"])
-        .eq("service", me.service)
-        .order("created_at", { ascending: false })
-        .limit(15);
+      const { data } = await supabase.rpc("list_open_jobs_for_fundi");
       if (cancelled) return;
       const rows = (data as Job[]) ?? [];
       // Detect new incoming requests since last poll
@@ -344,8 +338,6 @@ export default function FundiLivePanel() {
       },
       { onConflict: "job_id,fundi_id" },
     );
-    // Bump job to 'quoting' so it shows up in client's quote list
-    await supabase.from("jobs").update({ status: "quoting" }).eq("id", quoteFor.id).eq("status", "searching");
     setSubmittingQuote(false);
     if (error) {
       toast.error(error.message);
