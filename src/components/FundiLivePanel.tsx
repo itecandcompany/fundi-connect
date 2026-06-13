@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
 import SignedImage from "@/components/SignedImage";
 import FundiMap from "@/components/FundiMap";
+import { getOpenJobsForFundi } from "@/lib/openJobs.functions";
 
 type JobStatus =
   | "searching"
@@ -71,6 +73,7 @@ const NEXT: Partial<Record<JobStatus, { next: JobStatus; label: string }>> = {
 
 export default function FundiLivePanel() {
   const { user } = useAuth();
+  const loadOpenJobs = useServerFn(getOpenJobsForFundi);
   const [available, setAvailable] = useState(false);
   const [pos, setPos] = useState<[number, number] | null>(null);
   const [incoming, setIncoming] = useState<Job[]>([]);
@@ -264,7 +267,7 @@ export default function FundiLivePanel() {
         .eq("id", user.id)
         .maybeSingle();
       if (!me || cancelled) return;
-      const { data } = await supabase.rpc("list_open_jobs_for_fundi");
+      const data = await loadOpenJobs();
       if (cancelled) return;
       const rows = (data as Job[]) ?? [];
       // Detect new incoming requests since last poll
@@ -312,7 +315,7 @@ export default function FundiLivePanel() {
       cancelled = true;
       supabase.removeChannel(ch);
     };
-  }, [user?.id, available, active?.id]);
+  }, [user?.id, available, active?.id, loadOpenJobs]);
 
   const toggleAvailable = async (v: boolean) => {
     if (!user) return;
