@@ -50,7 +50,10 @@ function operationId() {
 
 async function runOperation(operation: QueueOperation) {
   if (operation.kind === "job-update") {
-    const { error } = await supabase.from("jobs").update(operation.payload).eq("id", operation.jobId);
+    const { error } = await supabase
+      .from("jobs")
+      .update(operation.payload)
+      .eq("id", operation.jobId);
     if (error) throw error;
     return;
   }
@@ -81,7 +84,14 @@ export const useOfflineQueue = create<OfflineQueueState>()(
         set((state) => ({
           operations: [
             ...state.operations,
-            { id: operationId(), kind: "job-update", jobId, payload, attempts: 0, nextAttemptAt: 0 },
+            {
+              id: operationId(),
+              kind: "job-update",
+              jobId,
+              payload,
+              attempts: 0,
+              nextAttemptAt: 0,
+            },
           ],
         }));
         void get().processQueue();
