@@ -48,6 +48,12 @@ function operationId() {
   return globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
 }
 
+function isConnectivityError(error: unknown) {
+  if (typeof navigator !== "undefined" && !navigator.onLine) return true;
+  const message = error instanceof Error ? error.message : String(error);
+  return /fetch|network|connection|offline|timeout/i.test(message);
+}
+
 async function runOperation(operation: QueueOperation) {
   if (operation.kind === "job-update") {
     const { error } = await supabase
@@ -126,7 +132,13 @@ export const useOfflineQueue = create<OfflineQueueState>()(
               set((state) => ({
                 operations: state.operations.filter((item) => item.id !== operation.id),
               }));
-            } catch {
+            } catch (error) {
+              if (!isConnectivityError(error)) {
+                set((state) => ({
+                  operations: state.operations.filter((item) => item.id !== operation.id),
+                }));
+                continue;
+              }
               const attempts = operation.attempts + 1;
               const delay = Math.min(MAX_DELAY_MS, BASE_DELAY_MS * 2 ** Math.min(attempts, 6));
               set((state) => ({
