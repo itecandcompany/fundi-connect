@@ -15,13 +15,20 @@ export type JobStatus =
 
 type QueueOperation = {
   id: string;
-  kind: "job-update" | "location-backup";
   jobId: string;
-  userId?: string;
-  payload: Database["public"]["Tables"]["jobs"]["Update"] | { lat: number; lng: number };
   attempts: number;
   nextAttemptAt: number;
-};
+} & (
+  | {
+      kind: "job-update";
+      payload: Database["public"]["Tables"]["jobs"]["Update"];
+    }
+  | {
+      kind: "location-backup";
+      userId: string;
+      payload: { lat: number; lng: number };
+    }
+);
 
 type OfflineQueueState = {
   operations: QueueOperation[];
@@ -43,15 +50,14 @@ function operationId() {
 
 async function runOperation(operation: QueueOperation) {
   if (operation.kind === "job-update") {
-    const payload = operation.payload as Database["public"]["Tables"]["jobs"]["Update"];
-    const { error } = await supabase.from("jobs").update(payload).eq("id", operation.jobId);
+    const { error } = await supabase.from("jobs").update(operation.payload).eq("id", operation.jobId);
     if (error) throw error;
     return;
   }
 
   const lat = Number(operation.payload.lat);
   const lng = Number(operation.payload.lng);
-  if (!operation.userId || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
 
   const [{ error: locationError }, { error: jobError }] = await Promise.all([
     supabase.from("job_locations").insert({
