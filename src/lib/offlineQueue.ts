@@ -136,6 +136,7 @@ export const useOfflineQueue = create<OfflineQueueState>()(
                     : item,
                 ),
               }));
+              break;
             }
           }
         } finally {
