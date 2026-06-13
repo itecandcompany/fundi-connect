@@ -20,7 +20,7 @@ async function uploadFile(userId: string, jobId: string, kind: string, file: Blo
     contentType: file.type || `image/${ext}`,
   });
   if (error) throw error;
-  return supabase.storage.from("job-photos").getPublicUrl(path).data.publicUrl;
+  return path;
 }
 
 function SignaturePad({ onChange }: { onChange: (blob: Blob | null) => void }) {
