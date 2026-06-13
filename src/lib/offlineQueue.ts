@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 export type JobStatus =
   | "searching"
@@ -17,7 +18,7 @@ type QueueOperation = {
   kind: "job-update" | "location-backup";
   jobId: string;
   userId?: string;
-  payload: Record<string, unknown>;
+  payload: Database["public"]["Tables"]["jobs"]["Update"] | { lat: number; lng: number };
   attempts: number;
   nextAttemptAt: number;
 };
@@ -25,7 +26,10 @@ type QueueOperation = {
 type OfflineQueueState = {
   operations: QueueOperation[];
   processing: boolean;
-  enqueueJobUpdate: (jobId: string, payload: Record<string, unknown>) => void;
+  enqueueJobUpdate: (
+    jobId: string,
+    payload: Database["public"]["Tables"]["jobs"]["Update"],
+  ) => void;
   enqueueLocationBackup: (jobId: string, userId: string, lat: number, lng: number) => void;
   processQueue: () => Promise<void>;
 };
@@ -39,7 +43,8 @@ function operationId() {
 
 async function runOperation(operation: QueueOperation) {
   if (operation.kind === "job-update") {
-    const { error } = await supabase.from("jobs").update(operation.payload).eq("id", operation.jobId);
+    const payload = operation.payload as Database["public"]["Tables"]["jobs"]["Update"];
+    const { error } = await supabase.from("jobs").update(payload).eq("id", operation.jobId);
     if (error) throw error;
     return;
   }
