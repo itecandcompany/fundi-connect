@@ -31,6 +31,8 @@ import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/Pro
 import SignedImage from "@/components/SignedImage";
 import FundiMap from "@/components/FundiMap";
 import { getOpenJobsForFundi } from "@/lib/openJobs.functions";
+import { useOfflineQueue } from "@/lib/offlineQueue";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 type JobStatus =
   | "searching"
@@ -90,7 +92,11 @@ export default function FundiLivePanel() {
   const [myQuoteIds, setMyQuoteIds] = useState<Record<string, string>>({});
   const [proofMode, setProofMode] = useState<ProofMode | null>(null);
   const [receiptJobId, setReceiptJobId] = useState<string | null>(null);
+  const enqueueJobUpdate = useOfflineQueue((state) => state.enqueueJobUpdate);
+  const enqueueLocationBackup = useOfflineQueue((state) => state.enqueueLocationBackup);
   const watchRef = useRef<number | null>(null);
+  const locationChannelRef = useRef<RealtimeChannel | null>(null);
+  const latestPosRef = useRef<[number, number] | null>(null);
   const incomingIdsRef = useRef<Set<string>>(new Set());
   const activeIdRef = useRef<string | null>(null);
 
@@ -148,28 +154,52 @@ export default function FundiLivePanel() {
     };
   }, [available, active?.id]);
 
-  // Push GPS
   useEffect(() => {
-    if (!user || !pos) return;
-    const push = () => {
-      supabase
+    latestPosRef.current = pos;
+  }, [pos]);
+
+  // Open one private Broadcast channel for the active job.
+  useEffect(() => {
+    if (!active || !user || active.status === "completed" || active.status === "cancelled") return;
+    const channel = supabase.channel(`job:${active.id}`, {
+      config: { private: true, broadcast: { ack: true } },
+    });
+    locationChannelRef.current = channel;
+    channel.subscribe();
+    return () => {
+      locationChannelRef.current = null;
+      void supabase.removeChannel(channel);
+    };
+  }, [active?.id, active?.status, user?.id]);
+
+  // Broadcast every fresh GPS fix without touching Postgres.
+  useEffect(() => {
+    if (!active || !user || !pos || !locationChannelRef.current) return;
+    void locationChannelRef.current.send({
+      type: "broadcast",
+      event: "location",
+      payload: { user_id: user.id, lat: pos[0], lng: pos[1], sent_at: Date.now() },
+    });
+  }, [pos?.[0], pos?.[1], active?.id, user?.id]);
+
+  // Keep a sparse audit trail and discovery location every 45 seconds.
+  useEffect(() => {
+    if (!user || (!available && !active)) return;
+    const backup = () => {
+      const latest = latestPosRef.current;
+      if (!latest) return;
+      void supabase
         .from("fundis")
-        .update({ current_lat: pos[0], current_lng: pos[1], updated_at: new Date().toISOString() })
+        .update({ current_lat: latest[0], current_lng: latest[1], updated_at: new Date().toISOString() })
         .eq("id", user.id);
       if (active && active.status !== "completed" && active.status !== "cancelled") {
-        supabase.from("job_locations").insert({
-          job_id: active.id,
-          user_id: user.id,
-          lat: pos[0],
-          lng: pos[1],
-        });
-        supabase.from("jobs").update({ fundi_lat: pos[0], fundi_lng: pos[1] }).eq("id", active.id);
+        enqueueLocationBackup(active.id, user.id, latest[0], latest[1]);
       }
     };
-    push();
-    const id = setInterval(push, 8000);
-    return () => clearInterval(id);
-  }, [pos?.[0], pos?.[1], user?.id, active?.id, active?.status]);
+    backup();
+    const id = window.setInterval(backup, 45_000);
+    return () => window.clearInterval(id);
+  }, [available, active?.id, active?.status, user?.id, enqueueLocationBackup]);
 
   // Active job
   useEffect(() => {
@@ -384,8 +414,9 @@ export default function FundiLivePanel() {
     }
     const patch: { status: JobStatus; arrived_at?: string } = { status: step.next };
     if (step.next === "arrived") patch.arrived_at = new Date().toISOString();
-    const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
-    if (error) toast.error(error.message);
+    setActive((current) => (current ? { ...current, ...patch } : current));
+    enqueueJobUpdate(active.id, patch);
+    if (pos) enqueueLocationBackup(active.id, user?.id ?? "", pos[0], pos[1]);
   };
 
   const submitProof = async (result: ProofResult) => {
@@ -404,11 +435,9 @@ export default function FundiLivePanel() {
             after_photos: [...(active.after_photos ?? []), ...result.photoUrls],
             signature_url: result.signatureUrl ?? null,
           };
-    const { error } = await supabase.from("jobs").update(patch).eq("id", active.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
+    setActive((current) => (current ? { ...current, ...patch } : current));
+    enqueueJobUpdate(active.id, patch);
+    if (pos && user) enqueueLocationBackup(active.id, user.id, pos[0], pos[1]);
     setProofMode(null);
     toast.success(proofMode === "start" ? "Job started" : "Job completed");
   };

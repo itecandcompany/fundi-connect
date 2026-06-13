@@ -110,21 +110,6 @@ export default function LiveMap({
     };
   }, []);
 
-  // Stream client GPS into job_locations while a job is active
-  useEffect(() => {
-    if (!activeJob || !user || !pos) return;
-    if (activeJob.status === "completed" || activeJob.status === "cancelled") return;
-    const id = setInterval(() => {
-      supabase.from("job_locations").insert({
-        job_id: activeJob.id,
-        user_id: user.id,
-        lat: pos[0],
-        lng: pos[1],
-      });
-    }, 10_000);
-    return () => clearInterval(id);
-  }, [activeJob?.id, activeJob?.status, user?.id, pos?.[0], pos?.[1]]);
-
   // 2. Initial fundi fetch + realtime subscription
   useEffect(() => {
     let cancelled = false;
@@ -281,7 +266,7 @@ export default function LiveMap({
     };
   }, [user?.id]);
 
-  // Subscribe to live fundi GPS stream from job_locations for the active job
+  // Seed from the audit trail, then receive ephemeral fundi GPS over Broadcast.
   useEffect(() => {
     if (!activeJob || !activeJob.fundi_id) return;
     const jobId = activeJob.id;
@@ -305,13 +290,13 @@ export default function LiveMap({
       });
 
     const channel = supabase
-      .channel(`job-loc-${jobId}`)
+      .channel(`job:${jobId}`, { config: { private: true } })
       .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "job_locations", filter: `job_id=eq.${jobId}` },
-        (payload) => {
-          const row = payload.new as { user_id: string; lat: number; lng: number };
-          if (row.user_id !== fundiId) return;
+        "broadcast",
+        { event: "location" },
+        ({ payload }) => {
+          const row = payload as { user_id?: string; lat?: number; lng?: number };
+          if (row.user_id !== fundiId || row.lat == null || row.lng == null) return;
           setActiveJob((prev) =>
             prev && prev.id === jobId ? { ...prev, fundi_lat: row.lat, fundi_lng: row.lng } : prev,
           );
