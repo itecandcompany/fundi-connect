@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export async function uploadJobPhotos(userId: string, files: File[]): Promise<string[]> {
-  const urls: string[] = [];
+  const paths: string[] = [];
   for (const f of files.slice(0, 5)) {
     const ext = f.name.split(".").pop() || "jpg";
     const path = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -11,8 +11,7 @@ export async function uploadJobPhotos(userId: string, files: File[]): Promise<st
       contentType: f.type || "image/jpeg",
     });
     if (error) continue;
-    const { data } = supabase.storage.from("job-photos").getPublicUrl(path);
-    urls.push(data.publicUrl);
+    paths.push(path);
   }
-  return urls;
+  return paths;
 }
