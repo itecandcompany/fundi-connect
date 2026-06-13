@@ -165,7 +165,15 @@ export default function FundiLivePanel() {
       config: { private: true, broadcast: { ack: true } },
     });
     locationChannelRef.current = channel;
-    channel.subscribe();
+    channel.subscribe((status) => {
+      const latest = latestPosRef.current;
+      if (status !== "SUBSCRIBED" || !latest) return;
+      void channel.send({
+        type: "broadcast",
+        event: "location",
+        payload: { user_id: user.id, lat: latest[0], lng: latest[1], sent_at: Date.now() },
+      });
+    });
     return () => {
       locationChannelRef.current = null;
       void supabase.removeChannel(channel);
