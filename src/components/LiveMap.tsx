@@ -297,8 +297,10 @@ export default function LiveMap({
         ({ payload }) => {
           const row = payload as { user_id?: string; lat?: number; lng?: number };
           if (row.user_id !== fundiId || row.lat == null || row.lng == null) return;
+          const lat = row.lat;
+          const lng = row.lng;
           setActiveJob((prev) =>
-            prev && prev.id === jobId ? { ...prev, fundi_lat: row.lat, fundi_lng: row.lng } : prev,
+            prev && prev.id === jobId ? { ...prev, fundi_lat: lat, fundi_lng: lng } : prev,
           );
         },
       )

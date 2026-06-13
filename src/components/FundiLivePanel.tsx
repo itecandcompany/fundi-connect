@@ -416,7 +416,7 @@ export default function FundiLivePanel() {
     if (step.next === "arrived") patch.arrived_at = new Date().toISOString();
     setActive((current) => (current ? { ...current, ...patch } : current));
     enqueueJobUpdate(active.id, patch);
-    if (pos) enqueueLocationBackup(active.id, user?.id ?? "", pos[0], pos[1]);
+    if (pos && user) enqueueLocationBackup(active.id, user.id, pos[0], pos[1]);
   };
 
   const submitProof = async (result: ProofResult) => {
