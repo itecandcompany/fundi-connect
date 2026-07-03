@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SERVICE_META, type ServiceKey, formatTsh } from "@/lib/geo";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { Loader2, ArrowLeft, Wrench } from "lucide-react";
 
 export const Route = createFileRoute("/fundi/setup")({
   ssr: false,
@@ -94,20 +94,40 @@ function FundiSetup() {
       <div className="max-w-2xl mx-auto space-y-6">
         <button
           onClick={() => navigate({ to: "/app" })}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+          className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
         >
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
 
-        <div>
-          <h1 className="font-display font-bold text-3xl">Fundi setup</h1>
-          <p className="text-muted-foreground mt-1">
-            Pick your trade so we can match you with the right jobs.
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="h-12 w-12 rounded-2xl grid place-items-center bg-primary/10 text-primary shrink-0">
+            <Wrench className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <h1 className="font-display font-bold text-2xl sm:text-3xl">Fundi setup</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Pick your trade so we can match you with the right jobs.
+            </p>
+          </div>
+        </div>
+
+        {/* Progress */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px] text-muted-foreground">
+            <span>Trade</span>
+            <span>Rate & bio</span>
+            <span>Done</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-gradient-primary transition-all"
+              style={{ width: service ? (Number(rate) > 0 ? "100%" : "66%") : "33%" }}
+            />
+          </div>
         </div>
 
         <Card className="p-5 space-y-3">
-          <Label className="text-sm font-semibold">Your service category</Label>
+          <Label className="text-sm font-semibold">1. Your service category</Label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {SERVICES.map(([key, meta]) => {
               const active = service === key;
@@ -116,7 +136,7 @@ function FundiSetup() {
                   key={key}
                   type="button"
                   onClick={() => setService(key)}
-                  className={`rounded-2xl border-2 p-4 text-left transition-all ${
+                  className={`rounded-2xl border-2 p-4 text-left transition-all active:scale-[0.98] ${
                     active
                       ? "border-primary bg-primary/5 shadow-md"
                       : "border-border hover:border-primary/40"
@@ -134,6 +154,7 @@ function FundiSetup() {
         </Card>
 
         <Card className="p-5 space-y-4">
+          <Label className="text-sm font-semibold">2. Rate & bio</Label>
           <div>
             <Label htmlFor="rate">Hourly rate (TSh)</Label>
             <Input
@@ -144,6 +165,9 @@ function FundiSetup() {
               onChange={(e) => setRate(e.target.value)}
               className="h-12 text-base"
             />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              Clients see this as a starting point — you can quote per job.
+            </p>
           </div>
           <div>
             <Label htmlFor="bio">Short bio (optional)</Label>
@@ -157,13 +181,15 @@ function FundiSetup() {
           </div>
         </Card>
 
-        <Button
-          onClick={submit}
-          disabled={busy || !service}
-          className="w-full h-12 bg-gradient-primary"
-        >
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & continue"}
-        </Button>
+        <div className="sticky bottom-0 -mx-4 px-4 py-3 pb-[max(env(safe-area-inset-bottom),12px)] bg-background/95 backdrop-blur border-t">
+          <Button
+            onClick={submit}
+            disabled={busy || !service || !(Number(rate) > 0)}
+            className="w-full h-12 bg-gradient-primary text-base"
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save & continue"}
+          </Button>
+        </div>
       </div>
     </div>
   );

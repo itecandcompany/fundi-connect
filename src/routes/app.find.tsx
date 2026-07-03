@@ -9,6 +9,7 @@ import LiveMap from "@/components/LiveMap";
 import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import type { ServiceKey } from "@/lib/geo";
+import FlowStepper from "@/components/FlowStepper";
 
 export const Route = createFileRoute("/app/find")({
   ssr: false,
@@ -94,7 +95,7 @@ function FindPage() {
   return (
     <div className="h-[100svh] flex flex-col bg-background">
       <header className="bg-background/90 backdrop-blur border-b z-20">
-        <div className="px-4 py-3 flex items-center gap-3">
+        <div className="px-4 pt-[max(env(safe-area-inset-top),12px)] pb-3 flex items-center gap-3">
           {!hasActive && (
             <Button asChild variant="ghost" size="icon">
               <Link to="/app/describe"><ArrowLeft className="h-4 w-4" /></Link>
@@ -102,7 +103,7 @@ function FindPage() {
           )}
           <div className="flex-1 min-w-0">
             <div className="font-display font-bold leading-tight truncate">
-              Fundis near you
+              {hasActive ? "Your fundi is on the way" : "Fundis near you"}
             </div>
             <div className="text-xs text-muted-foreground truncate">
               {meta.icon} {meta.label}
@@ -110,6 +111,11 @@ function FindPage() {
             </div>
           </div>
         </div>
+        {!hasActive && (
+          <div className="px-4 pb-3">
+            <FlowStepper step={3} />
+          </div>
+        )}
       </header>
 
       <div className="flex-1 relative">

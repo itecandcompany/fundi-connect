@@ -1,69 +1,39 @@
-# Multi-step client booking flow
+# UX Improvement Pass
 
-Today `/app` shows the map and the booking sheet on top of each other. We'll break the client journey into discrete routes, each on its own page, so the user moves forward step by step.
+You picked all four areas, so I'll do one focused polish pass touching each without changing business logic.
 
-## New route structure
+## 1. Client booking flow
 
-```text
-/auth                       (exists) login / signup
-/app/service                NEW  choose category (plumber, electrician, phone tech, …)
-/app/describe               NEW  describe the problem (text + optional photos)
-/app/find                   NEW  full-screen map of nearby fundis + "Request" button
-/app                        existing — becomes a redirector that sends the user
-                                 to the right step based on their state
-```
+- `/app/service`: larger, tap-friendly cards with icons, service description, and haptic-style press animation. Show a progress indicator (1/3, 2/3, 3/3) across service → describe → find.
+- `/app/describe`: sticky "Continue" bar at the bottom on mobile, character counter, photo thumbnails with remove button, autosave to the flow store as user types.
+- `/app/find`: cleaner bottom card with service icon + short summary chip, prominent "Request fundi" CTA, and a soft skeleton while nearby fundis load. Cancel/back link goes to `/app/describe` instead of losing state.
 
-All `/app/*` routes are gated: if the user isn't logged in, redirect to `/auth`.
+## 2. Fundi dashboard
 
-## Per-page contents
+- Availability toggle becomes a large pill at the top with live status ("Online — visible to clients" / "Offline").
+- Incoming request list: each card shows distance, service, short problem summary, and quick "View" — quoting/accept flow opens in a sheet instead of inline noise.
+- Active-job panel gets clear stage chips (Accepted → On the way → Arrived → In progress) with the current stage highlighted.
+- Empty state ("No requests yet") with an illustration/emoji and a hint about staying online.
 
-**`/app/service` — Choose a category**
-- Grid of service cards (plumber, electrician, phone technician, …) sourced from `SERVICE_META` in `src/lib/geo.ts`.
-- Tapping a card stores the choice and routes to `/app/describe`.
+## 3. Onboarding & auth
 
-**`/app/describe` — Describe the problem**
-- Shows the selected service at the top with a "Change" link back to `/app/service`.
-- Textarea for the problem description (required, short min length).
-- Optional photo upload (reuses existing photo helpers in `src/lib/jobPhotos.ts`).
-- "Continue" button routes to `/app/find`.
-- "Back" returns to `/app/service`.
+- `/auth`: split into two clear tabs (Sign in / Create account), role picker as two big cards ("I need a fundi" vs "I am a fundi"), inline error messages instead of toast-only.
+- `/fundi/setup`: turn into a 3-step mini-wizard (trade → rate & bio → location permission) with a progress bar. Disable "Finish" until required fields are valid.
+- First-run tip on `/app/service` for brand new clients (dismissable).
 
-**`/app/find` — Map + request**
-- Full-screen `LiveMap` showing the user and all available fundis for the chosen service (existing behaviour).
-- Bottom card (not a draggable sheet) shows: service, problem summary, nearest fundi count, and a primary "Request fundi" button.
-- Submitting creates the job (same logic that's in `BookingSheet` today) and then routes into the existing active-job tracking UI.
-- If an active job already exists, this page shows the live tracking view instead of the request card.
+## 4. Global polish
 
-**`/app` — Smart redirector**
-- No category chosen → `/app/service`
-- Category chosen, no description → `/app/describe`
-- Both chosen, no active job → `/app/find`
-- Active job exists → `/app/find` (tracking mode)
-
-## State sharing between steps
-
-A tiny client store (Zustand or a React context in `src/lib/bookingFlow.ts`) holds:
-- `service: ServiceKey | null`
-- `description: string`
-- `photoUrls: string[]`
-
-Persisted to `sessionStorage` so a refresh mid-flow doesn't lose progress. Cleared after a job is successfully created.
-
-## Files to add / change
-
-- Add `src/lib/bookingFlow.ts` — flow store + helpers.
-- Add `src/routes/app.service.tsx` — category picker.
-- Add `src/routes/app.describe.tsx` — problem description + photos.
-- Add `src/routes/app.find.tsx` — map + request card (extracts job-creation logic from `BookingSheet`).
-- Edit `src/routes/app.tsx` — becomes the redirector / fundi-home shell (the fundi side stays as-is).
-- Edit `src/components/LiveMap.tsx` — accept a prop for "request mode" so the embedded `BookingSheet` isn't auto-mounted on `/app/find` (the new bottom card replaces it).
-- Keep the fundi role's existing `/app` view (FundiLivePanel) untouched — only the client flow changes.
+- Consistent page transitions using framer-motion (fade + subtle slide on route change) — respects `prefers-reduced-motion`.
+- Standard loading skeletons instead of "Loading…" text on `/app`, `/app/find`, admin routes.
+- Global toast styling: success/info/error variants tied to design tokens, positioned top-center on mobile.
+- Bottom safe-area padding on all sticky CTAs so nothing sits under the iOS home indicator.
+- Add lightweight top nav breadcrumbs on `/app/*` (Service › Describe › Find) so users know where they are.
 
 ## Out of scope
 
-- No backend / schema changes.
-- No changes to admin routes.
-- No changes to the fundi-side experience.
-- Lightbox / drawer work from prior turns is untouched.
+- No schema changes.
+- No changes to admin drawer/lightbox (already polished).
+- No changes to real-time / broadcast / offline queue logic.
+- No new features — pure UX/presentation.
 
-After you approve, I'll implement and verify the build.
+Approve and I'll implement in one pass and verify the build.

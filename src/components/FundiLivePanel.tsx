@@ -476,17 +476,37 @@ export default function FundiLivePanel() {
   return (
     <div className="space-y-4">
       {/* Online toggle */}
-      <Card className="p-4 flex items-center justify-between bg-gradient-to-br from-card to-secondary/30 border-2">
-        <div>
-          <div className="font-display font-bold text-lg">
-            {available ? "You're online" : "You're offline"}
+      <Card
+        className={`p-4 flex items-center justify-between border-2 transition-colors ${
+          available
+            ? "bg-gradient-to-br from-primary/10 to-primary/5 border-primary/40"
+            : "bg-gradient-to-br from-card to-secondary/30"
+        }`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="relative shrink-0">
+            <div
+              className={`h-3 w-3 rounded-full ${available ? "bg-success" : "bg-muted-foreground/40"}`}
+            />
+            {available && (
+              <span className="absolute inset-0 rounded-full bg-success animate-ping opacity-60" />
+            )}
           </div>
-          <div className="text-xs text-muted-foreground flex items-center gap-1">
-            <MapPin className="h-3 w-3" />
-            {pos ? "GPS active" : "Locating…"}
+          <div className="min-w-0">
+            <div className="font-display font-bold text-lg leading-tight truncate">
+              {available ? "You're online" : "You're offline"}
+            </div>
+            <div className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3 shrink-0" />
+              {available
+                ? pos
+                  ? "Visible to nearby clients"
+                  : "Locating GPS…"
+                : "Go online to receive requests"}
+            </div>
           </div>
         </div>
-        <Switch checked={available} onCheckedChange={toggleAvailable} className="scale-125" />
+        <Switch checked={available} onCheckedChange={toggleAvailable} className="scale-125 shrink-0" />
       </Card>
 
       {/* Live map */}
