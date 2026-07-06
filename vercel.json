@@ -2,5 +2,9 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "rewrites": [
+    { "source": "/_vercel/express", "destination": "api/index.js" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
