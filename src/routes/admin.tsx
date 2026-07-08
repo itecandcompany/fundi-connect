@@ -4,7 +4,9 @@ import { useAuth } from "@/lib/auth";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
-export const Route = createFileRoute("/admin")({ component: AdminLayout });
+export const Route = createFileRoute("/admin")({
+  component: AdminLayout,
+});
 
 function AdminLayout() {
   const { user, profile, loading } = useAuth();
