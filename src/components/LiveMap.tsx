@@ -13,6 +13,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ActiveJobLayer, { type ActiveJob } from "./ActiveJobLayer";
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
+import { pushNotification } from "@/lib/notifications";
 import BookingSheet from "./booking/BookingSheet";
 import JobChat from "./chat/JobChat";
 
@@ -237,9 +238,14 @@ export default function LiveMap({
               if (byOther) {
                 toast.error(`Fundi cancelled the job · ${when}`, { description: reason });
                 sendBrowserNotification("Job cancelled by fundi", `${reason} · ${when}`);
+                pushNotification({ kind: "error", title: "Fundi cancelled the job", body: `${reason} · ${when}`, jobId: row.id });
               } else {
                 toast.message(`Job cancelled · ${when}`, { description: reason });
+                pushNotification({ kind: "warning", title: "Job cancelled", body: `${reason} · ${when}`, jobId: row.id });
               }
+            }
+            if (row.status === "completed") {
+              pushNotification({ kind: "success", title: "Job completed", body: "Thanks for using FundiFast!", jobId: row.id });
             }
             return;
           }
@@ -254,6 +260,7 @@ export default function LiveMap({
             if (map[row.status]) {
               toast.message(map[row.status]);
               sendBrowserNotification(map[row.status], "Open the app for details");
+              pushNotification({ kind: row.status === "arrived" ? "success" : "info", title: map[row.status], body: "Open the app for details", jobId: row.id });
             }
           }
         },

@@ -26,8 +26,10 @@ import {
   type ServiceKey,
 } from "@/lib/geo";
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
+import { pushNotification } from "@/lib/notifications";
 import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
+import JobStatusTimeline from "./JobStatusTimeline";
 import SignedImage from "@/components/SignedImage";
 import FundiMap from "@/components/FundiMap";
 import { getOpenJobsForFundi } from "@/lib/openJobs.functions";
@@ -246,11 +248,13 @@ export default function FundiLivePanel() {
               const reason = row.cancellation_reason || "No reason provided";
               toast.error(`Client cancelled the job`, { description: reason });
               sendBrowserNotification("Job cancelled by client", reason);
+              pushNotification({ kind: "error", title: "Client cancelled the job", body: reason, jobId: row.id });
             }
             if (row.status === "completed") {
               loadEarnings();
               toast.success("Job complete — earnings updated");
               sendBrowserNotification("Job completed", "Earnings have been updated");
+              pushNotification({ kind: "success", title: "Job completed", body: "Earnings have been updated", jobId: row.id });
               setReceiptJobId(row.id);
             }
             setActive((prev) => (prev?.id === row.id ? null : prev));
@@ -264,6 +268,7 @@ export default function FundiLivePanel() {
                 "Quote accepted",
                 `${row.problem_title || "New job"} is yours — head over!`,
               );
+              pushNotification({ kind: "success", title: "Quote accepted", body: `${row.problem_title || "New job"} is yours`, jobId: row.id });
             }
           }
           setActive(row);
@@ -555,6 +560,8 @@ export default function FundiLivePanel() {
               {active.status.replace("_", " ")}
             </span>
           </div>
+
+          <JobStatusTimeline status={active.status} />
 
           {active.problem_description && (
             <p className="text-sm text-muted-foreground">{active.problem_description}</p>

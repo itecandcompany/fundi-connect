@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { LogOut, Shield, Settings } from "lucide-react";
 import FundiLivePanel from "@/components/FundiLivePanel";
+import NotificationsBell from "@/components/NotificationsBell";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/app")({ component: AppLayout });
@@ -49,6 +50,7 @@ function AppLayout() {
             <div className="font-display font-bold">FundiFast</div>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">Hi, {profile.full_name.split(" ")[0]}</span>
+              <NotificationsBell />
               <Button asChild variant="ghost" size="icon" title="Edit service / rate">
                 <Link to="/fundi/setup"><Settings className="h-4 w-4" /></Link>
               </Button>

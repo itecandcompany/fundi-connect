@@ -6,6 +6,7 @@ import { fetchRoute, SERVICE_META, type RouteResult, type ServiceKey } from "@/l
 import { Button } from "@/components/ui/button";
 import { Phone, Navigation2, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import JobStatusTimeline from "./JobStatusTimeline";
 
 type JobStatus =
   | "searching"
@@ -30,13 +31,18 @@ export type ActiveJob = {
 };
 
 const STATUS_LABEL: Record<JobStatus, string> = {
-  searching: "Searching for fundi…",
-  accepted: "Fundi accepted — preparing",
-  on_the_way: "Fundi is on the way",
-  arrived: "Fundi has arrived",
+  searching: "Finding a nearby fundi…",
+  accepted: "Fundi accepted — preparing to leave",
+  on_the_way: "Fundi is on the way to you",
+  arrived: "Fundi has arrived at your location",
   in_progress: "Job in progress",
   completed: "Completed",
   cancelled: "Cancelled",
+};
+
+const STATUS_HINT: Partial<Record<JobStatus, string>> = {
+  searching: "We're pinging fundis near you. This usually takes under a minute.",
+  accepted: "Your fundi will start moving toward you shortly.",
 };
 
 function fundiPin(color: string, icon: string) {
@@ -183,6 +189,19 @@ export default function ActiveJobLayer({
               </Button>
             )}
           </div>
+
+          {job.status !== "completed" && job.status !== "cancelled" && (
+            <div className="mt-3">
+              <JobStatusTimeline status={job.status} />
+            </div>
+          )}
+
+          {STATUS_HINT[job.status] && (
+            <div className="mt-2 text-[11px] text-muted-foreground bg-muted/50 rounded-md px-2 py-1.5">
+              {STATUS_HINT[job.status]}
+            </div>
+          )}
+
           {fundiPos && job.status !== "completed" && (
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div className="bg-muted rounded-lg p-2">

@@ -7,7 +7,7 @@ import { SERVICE_META } from "@/lib/geo";
 import { loadFlow, saveFlow } from "@/lib/bookingFlow";
 import { uploadJobPhotos } from "@/lib/jobPhotos";
 import { useAuth } from "@/lib/auth";
-import { ArrowLeft, ArrowRight, Camera, Loader2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, ImagePlus, Loader2, X, AlertCircle } from "lucide-react";
 import FlowStepper from "@/components/FlowStepper";
 import { toast } from "sonner";
 
@@ -15,6 +15,11 @@ export const Route = createFileRoute("/app/describe")({
   ssr: false,
   component: DescribePage,
 });
+
+const MAX_FILES = 5;
+const MAX_SIZE_MB = 5;
+const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
+const ACCEPTED = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
 
 function DescribePage() {
   const navigate = useNavigate();
@@ -25,6 +30,8 @@ function DescribePage() {
   const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [dragging, setDragging] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
   const [service, setService] = useState<ReturnType<typeof loadFlow>["service"]>(null);
 
   useEffect(() => {
@@ -51,9 +58,37 @@ function DescribePage() {
   if (!service) return null;
   const meta = SERVICE_META[service];
 
-  const onPickFiles = (list: FileList | null) => {
+  const totalPhotos = existingPhotos.length + files.length;
+  const remaining = Math.max(0, MAX_FILES - totalPhotos);
+
+  const addFiles = (list: FileList | File[] | null) => {
     if (!list) return;
-    setFiles(Array.from(list).slice(0, 5));
+    const arr = Array.from(list);
+    const errors: string[] = [];
+    const accepted: File[] = [];
+    for (const f of arr) {
+      if (accepted.length >= remaining) {
+        errors.push(`Only ${MAX_FILES} photos allowed`);
+        break;
+      }
+      if (!f.type.startsWith("image/") && !ACCEPTED.includes(f.type)) {
+        errors.push(`${f.name}: not an image`);
+        continue;
+      }
+      if (f.size > MAX_SIZE_BYTES) {
+        errors.push(`${f.name}: over ${MAX_SIZE_MB}MB`);
+        continue;
+      }
+      accepted.push(f);
+    }
+    if (accepted.length) setFiles((prev) => [...prev, ...accepted]);
+    if (errors.length) {
+      const msg = errors[0] + (errors.length > 1 ? ` (+${errors.length - 1} more)` : "");
+      setPhotoError(msg);
+      toast.error(msg);
+    } else {
+      setPhotoError(null);
+    }
   };
 
   const continueNext = async () => {
@@ -143,58 +178,108 @@ function DescribePage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium">Photos (optional, up to 5)</label>
-            <div className="mt-1 flex flex-wrap gap-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Photos (optional)</label>
+              <span className="text-[11px] text-muted-foreground">
+                {totalPhotos}/{MAX_FILES} · max {MAX_SIZE_MB}MB each
+              </span>
+            </div>
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                if (remaining > 0) setDragging(true);
+              }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                addFiles(e.dataTransfer.files);
+              }}
+              className={[
+                "mt-1 rounded-xl border-2 border-dashed p-3 transition-colors",
+                dragging
+                  ? "border-primary bg-primary/5"
+                  : "border-muted-foreground/25 bg-muted/20",
+              ].join(" ")}
+            >
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
               {existingPhotos.map((url) => (
-                <div key={url} className="relative">
-                  <img src={url} alt="" className="h-20 w-20 object-cover rounded-lg border" />
+                <div key={url} className="relative aspect-square">
+                  <img src={url} alt="" className="h-full w-full object-cover rounded-lg border" />
                   <button
                     type="button"
                     onClick={() =>
                       setExistingPhotos((arr) => arr.filter((u) => u !== url))
                     }
-                    className="absolute -top-1 -right-1 bg-background border rounded-full p-0.5"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-              {files.map((f, i) => (
-                <div key={i} className="relative">
-                  <img
-                    alt=""
-                    src={URL.createObjectURL(f)}
-                    className="h-20 w-20 object-cover rounded-lg border"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setFiles((arr) => arr.filter((_, j) => j !== i))}
-                    className="absolute -top-1 -right-1 bg-background border rounded-full p-0.5"
+                    className="absolute -top-1.5 -right-1.5 bg-background border rounded-full p-1 shadow"
                     aria-label="Remove photo"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="h-20 w-20 rounded-lg border-2 border-dashed grid place-items-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
-              >
-                <Camera className="h-5 w-5" />
-              </button>
+              {files.map((f, i) => (
+                <div key={i} className="relative aspect-square">
+                  <img
+                    alt=""
+                    src={URL.createObjectURL(f)}
+                    className="h-full w-full object-cover rounded-lg border"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiles((arr) => arr.filter((_, j) => j !== i));
+                      setPhotoError(null);
+                    }}
+                    className="absolute -top-1.5 -right-1.5 bg-background border rounded-full p-1 shadow"
+                    aria-label="Remove photo"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <div className="absolute bottom-1 left-1 right-1 text-[9px] bg-black/60 text-white rounded px-1 truncate">
+                    {(f.size / 1024 / 1024).toFixed(1)}MB
+                  </div>
+                </div>
+              ))}
+              {remaining > 0 && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="aspect-square rounded-lg border-2 border-dashed grid place-items-center text-muted-foreground hover:border-primary hover:text-primary transition-colors bg-background/60"
+                >
+                  <div className="text-center">
+                    <ImagePlus className="h-5 w-5 mx-auto" />
+                    <div className="text-[10px] mt-1">Add</div>
+                  </div>
+                </button>
+              )}
+              </div>
+              {totalPhotos === 0 && (
+                <p className="text-center text-[11px] text-muted-foreground mt-2">
+                  Drag photos here or tap Add
+                </p>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
                 multiple
                 className="hidden"
-                onChange={(e) => onPickFiles(e.target.files)}
+                onChange={(e) => {
+                  addFiles(e.target.files);
+                  e.currentTarget.value = "";
+                }}
               />
             </div>
-            <p className="text-[11px] text-muted-foreground mt-2">
-              Clear photos help fundis quote faster and more accurately.
-            </p>
+            {photoError ? (
+              <p className="text-[11px] text-red-500 mt-2 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> {photoError}
+              </p>
+            ) : (
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Clear photos help fundis quote faster and more accurately.
+              </p>
+            )}
           </div>
         </div>
       </main>
