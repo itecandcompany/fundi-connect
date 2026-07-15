@@ -10,6 +10,7 @@ import { ArrowLeft, Loader2, Send } from "lucide-react";
 import { toast } from "sonner";
 import type { ServiceKey } from "@/lib/geo";
 import FlowStepper from "@/components/FlowStepper";
+import NotificationsBell from "@/components/NotificationsBell";
 
 export const Route = createFileRoute("/app/find")({
   ssr: false,
@@ -110,6 +111,7 @@ function FindPage() {
               {title ? ` · ${title}` : ""}
             </div>
           </div>
+          <NotificationsBell />
         </div>
         {!hasActive && (
           <div className="px-4 pb-3">
