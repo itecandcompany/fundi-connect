@@ -28,6 +28,7 @@ import {
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
 import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
+import JobStatusTimeline from "./JobStatusTimeline";
 import SignedImage from "@/components/SignedImage";
 import FundiMap from "@/components/FundiMap";
 import { getOpenJobsForFundi } from "@/lib/openJobs.functions";
@@ -555,6 +556,8 @@ export default function FundiLivePanel() {
               {active.status.replace("_", " ")}
             </span>
           </div>
+
+          <JobStatusTimeline status={active.status} />
 
           {active.problem_description && (
             <p className="text-sm text-muted-foreground">{active.problem_description}</p>
