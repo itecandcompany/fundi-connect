@@ -4,9 +4,21 @@ import L from "leaflet";
 import { supabase } from "@/integrations/supabase/client";
 import { fetchRoute, SERVICE_META, type RouteResult, type ServiceKey } from "@/lib/geo";
 import { Button } from "@/components/ui/button";
-import { Phone, Navigation2, X, CheckCircle2 } from "lucide-react";
+import { Phone, Navigation2, X, CheckCircle2, CalendarClock } from "lucide-react";
 import { toast } from "sonner";
 import JobStatusTimeline from "./JobStatusTimeline";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/lib/auth";
+import { pushNotification } from "@/lib/notifications";
 
 type JobStatus =
   | "searching"
@@ -91,6 +103,11 @@ export default function ActiveJobLayer({
   onClose: () => void;
 }) {
   const [route, setRoute] = useState<RouteResult | null>(null);
+  const { user } = useAuth();
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [rescheduleAt, setRescheduleAt] = useState("");
+  const [busy, setBusy] = useState(false);
   const meta = SERVICE_META[job.service];
 
   const fundiPos: [number, number] | null =
@@ -132,8 +149,49 @@ export default function ActiveJobLayer({
     }
   }, [job.status, reverseTrack, onReverseTrackChange]);
 
-  const cancel = async () => {
-    await supabase.from("jobs").update({ status: "cancelled" }).eq("id", job.id);
+  const submitCancel = async (mode: "cancel" | "reschedule") => {
+    if (busy) return;
+    setBusy(true);
+    const trimmed = reason.trim();
+    const base =
+      mode === "reschedule"
+        ? `Reschedule requested${
+            rescheduleAt ? ` for ${new Date(rescheduleAt).toLocaleString()}` : ""
+          }`
+        : "Cancelled by client";
+    const full = trimmed ? `${base}: ${trimmed}` : base;
+    const { error } = await supabase
+      .from("jobs")
+      .update({
+        status: "cancelled",
+        cancellation_reason: full,
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: user?.id ?? null,
+      })
+      .eq("id", job.id);
+    // Post a message into the job chat so the fundi sees context immediately.
+    if (!error && user && job.fundi_id) {
+      await supabase.from("job_messages").insert({
+        job_id: job.id,
+        sender_id: user.id,
+        body: full,
+      });
+    }
+    setBusy(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    pushNotification({
+      kind: mode === "reschedule" ? "warning" : "info",
+      title: mode === "reschedule" ? "Reschedule requested" : "Job cancelled",
+      body: full,
+      jobId: job.id,
+    });
+    toast.success(mode === "reschedule" ? "Reschedule sent" : "Job cancelled");
+    setCancelOpen(false);
+    setReason("");
+    setRescheduleAt("");
     onClose();
   };
 
@@ -184,7 +242,12 @@ export default function ActiveJobLayer({
             {job.status === "completed" ? (
               <CheckCircle2 className="h-6 w-6 text-emerald-500" />
             ) : (
-              <Button size="icon" variant="ghost" onClick={cancel} aria-label="Cancel">
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => setCancelOpen(true)}
+                aria-label="Cancel or reschedule"
+              >
                 <X className="h-4 w-4" />
               </Button>
             )}
@@ -245,6 +308,65 @@ export default function ActiveJobLayer({
           )}
         </div>
       </div>
+
+      <Dialog open={cancelOpen} onOpenChange={(o) => !busy && setCancelOpen(o)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel or reschedule</DialogTitle>
+            <DialogDescription>
+              Let your fundi know what changed. Optionally propose a new time to
+              keep the booking.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground">
+                Reason (shared with fundi)
+              </label>
+              <Textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="e.g. Something came up, need to move this…"
+                rows={3}
+                maxLength={280}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground flex items-center gap-1">
+                <CalendarClock className="h-3 w-3" /> Propose new time (optional)
+              </label>
+              <Input
+                type="datetime-local"
+                value={rescheduleAt}
+                onChange={(e) => setRescheduleAt(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setCancelOpen(false)}
+              disabled={busy}
+            >
+              Keep job
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => submitCancel("reschedule")}
+              disabled={busy || (!reason.trim() && !rescheduleAt)}
+            >
+              <CalendarClock className="h-4 w-4" /> Request reschedule
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => submitCancel("cancel")}
+              disabled={busy}
+            >
+              <X className="h-4 w-4" /> Cancel job
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
