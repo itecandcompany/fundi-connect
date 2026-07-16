@@ -17,10 +17,12 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6).max(72),
-  full_name: z.string().min(2).max(80).optional(),
+const baseSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+  password: z.string().min(6, "Password must be at least 6 characters").max(72),
+});
+const signupSchema = baseSchema.extend({
+  full_name: z.string().trim().min(2, "Please enter your full name").max(80),
 });
 
 function AuthPage() {
@@ -40,7 +42,10 @@ function AuthPage() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const parsed = schema.safeParse(form);
+    const parsed =
+      mode === "signup"
+        ? signupSchema.safeParse(form)
+        : baseSchema.safeParse({ email: form.email, password: form.password });
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
       return;
