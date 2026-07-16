@@ -38,7 +38,9 @@ export default function AdminSidebar() {
           {!collapsed && (
             <div className="leading-tight">
               <div className="font-display font-bold text-sm">FundiFast</div>
-              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Admin</div>
+              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                Admin
+              </div>
             </div>
           )}
         </div>

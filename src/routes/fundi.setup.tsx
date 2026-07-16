@@ -16,10 +16,7 @@ export const Route = createFileRoute("/fundi/setup")({
   component: FundiSetup,
 });
 
-const SERVICES = Object.entries(SERVICE_META) as [
-  ServiceKey,
-  (typeof SERVICE_META)[ServiceKey],
-][];
+const SERVICES = Object.entries(SERVICE_META) as [ServiceKey, (typeof SERVICE_META)[ServiceKey]][];
 
 function FundiSetup() {
   const { user, profile, loading } = useAuth();

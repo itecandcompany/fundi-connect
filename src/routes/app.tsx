@@ -32,7 +32,9 @@ function AppLayout() {
   }, [user?.id, profile?.role, loading, navigate]);
 
   if (loading || !profile) {
-    return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+    return (
+      <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>
+    );
   }
 
   const isFundi = profile.role === "fundi";
@@ -40,7 +42,9 @@ function AppLayout() {
 
   if (isFundi) {
     if (!fundiChecked) {
-      return <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>;
+      return (
+        <div className="min-h-screen grid place-items-center text-muted-foreground">Loading…</div>
+      );
     }
     return (
       <div className="min-h-screen bg-background pb-24">
@@ -48,16 +52,26 @@ function AppLayout() {
           <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
             <div className="font-display font-bold">FundiFast</div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Hi, {profile.full_name.split(" ")[0]}</span>
+              <span className="text-sm text-muted-foreground">
+                Hi, {profile.full_name.split(" ")[0]}
+              </span>
               <Button asChild variant="ghost" size="icon" title="Edit service / rate">
-                <Link to="/fundi/setup"><Settings className="h-4 w-4" /></Link>
+                <Link to="/fundi/setup">
+                  <Settings className="h-4 w-4" />
+                </Link>
               </Button>
               {isAdmin && (
                 <Button asChild variant="ghost" size="icon">
-                  <Link to="/admin"><Shield className="h-4 w-4" /></Link>
+                  <Link to="/admin">
+                    <Shield className="h-4 w-4" />
+                  </Link>
                 </Button>
               )}
-              <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate({ to: "/" }))}>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => signOut().then(() => navigate({ to: "/" }))}
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>

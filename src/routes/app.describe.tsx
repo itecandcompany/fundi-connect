@@ -74,7 +74,9 @@ function DescribePage() {
       <header className="border-b bg-background/90 backdrop-blur">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
           <Button asChild variant="ghost" size="icon">
-            <Link to="/app/service"><ArrowLeft className="h-4 w-4" /></Link>
+            <Link to="/app/service">
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
           </Button>
           <div>
             <div className="font-display font-bold leading-tight">Describe the problem</div>
@@ -131,9 +133,7 @@ function DescribePage() {
                   <img src={url} alt="" className="h-20 w-20 object-cover rounded-lg border" />
                   <button
                     type="button"
-                    onClick={() =>
-                      setExistingPhotos((arr) => arr.filter((u) => u !== url))
-                    }
+                    onClick={() => setExistingPhotos((arr) => arr.filter((u) => u !== url))}
                     className="absolute -top-1 -right-1 bg-background border rounded-full p-0.5"
                   >
                     <X className="h-3 w-3" />

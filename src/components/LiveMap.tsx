@@ -3,12 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import {
-  DEFAULT_CENTER,
-  SERVICE_META,
-  haversineKm,
-  type ServiceKey,
-} from "@/lib/geo";
+import { DEFAULT_CENTER, SERVICE_META, haversineKm, type ServiceKey } from "@/lib/geo";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import ActiveJobLayer, { type ActiveJob } from "./ActiveJobLayer";
@@ -160,8 +155,7 @@ export default function LiveMap({
             });
             return;
           }
-          const visible =
-            row.is_available && row.current_lat != null && row.current_lng != null;
+          const visible = row.is_available && row.current_lat != null && row.current_lng != null;
           if (!visible) {
             setFundis((prev) => {
               const cp = { ...prev };
@@ -228,7 +222,11 @@ export default function LiveMap({
             setActiveJob(row);
             if (row.status === "completed") toast.success("Job completed 🎉");
             if (row.status === "cancelled") {
-              const r = (row as ActiveJob & { cancellation_reason?: string | null; cancelled_by?: string | null; cancelled_at?: string | null });
+              const r = row as ActiveJob & {
+                cancellation_reason?: string | null;
+                cancelled_by?: string | null;
+                cancelled_at?: string | null;
+              };
               const byOther = r.cancelled_by && r.cancelled_by !== user.id;
               const reason = r.cancellation_reason || "No reason provided";
               const when = r.cancelled_at
@@ -291,19 +289,15 @@ export default function LiveMap({
 
     const channel = supabase
       .channel(`job:${jobId}`, { config: { private: true } })
-      .on(
-        "broadcast",
-        { event: "location" },
-        ({ payload }) => {
-          const row = payload as { user_id?: string; lat?: number; lng?: number };
-          if (row.user_id !== fundiId || row.lat == null || row.lng == null) return;
-          const lat = row.lat;
-          const lng = row.lng;
-          setActiveJob((prev) =>
-            prev && prev.id === jobId ? { ...prev, fundi_lat: lat, fundi_lng: lng } : prev,
-          );
-        },
-      )
+      .on("broadcast", { event: "location" }, ({ payload }) => {
+        const row = payload as { user_id?: string; lat?: number; lng?: number };
+        if (row.user_id !== fundiId || row.lat == null || row.lng == null) return;
+        const lat = row.lat;
+        const lng = row.lng;
+        setActiveJob((prev) =>
+          prev && prev.id === jobId ? { ...prev, fundi_lat: lat, fundi_lng: lng } : prev,
+        );
+      })
       .subscribe();
 
     return () => {
@@ -353,7 +347,9 @@ export default function LiveMap({
   if (!pos) {
     return (
       <div className="h-full grid place-items-center text-muted-foreground">
-        <div className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Locating you…</div>
+        <div className="flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" /> Locating you…
+        </div>
       </div>
     );
   }
@@ -386,14 +382,15 @@ export default function LiveMap({
           <Popup>You are here</Popup>
         </Marker>
 
-        {!hasActive && list.map(({ f }) => (
-          <Marker
-            key={f.id}
-            position={[f.current_lat!, f.current_lng!]}
-            icon={pinIcon(meta.color, meta.icon)}
-            eventHandlers={{ click: () => setFollow(false) }}
-          />
-        ))}
+        {!hasActive &&
+          list.map(({ f }) => (
+            <Marker
+              key={f.id}
+              position={[f.current_lat!, f.current_lng!]}
+              icon={pinIcon(meta.color, meta.icon)}
+              eventHandlers={{ click: () => setFollow(false) }}
+            />
+          ))}
 
         {activeJob && (
           <ActiveJobLayer

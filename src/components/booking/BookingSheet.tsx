@@ -4,13 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  SERVICE_META,
-  formatTsh,
-  haversineKm,
-  etaMinutes,
-  type ServiceKey,
-} from "@/lib/geo";
+import { SERVICE_META, formatTsh, haversineKm, etaMinutes, type ServiceKey } from "@/lib/geo";
 import { uploadJobPhotos } from "@/lib/jobPhotos";
 import RadarPulse from "./RadarPulse";
 import SignedImage from "@/components/SignedImage";
@@ -279,7 +273,9 @@ export default function BookingSheet({
   const cancel = async (reason?: string) => {
     if (!activeJob) return;
     const r =
-      reason ?? (window.prompt("Why are you cancelling? (shared with the fundi)", "") || "Cancelled by client");
+      reason ??
+      (window.prompt("Why are you cancelling? (shared with the fundi)", "") ||
+        "Cancelled by client");
     await supabase
       .from("jobs")
       .update({
@@ -337,9 +333,7 @@ export default function BookingSheet({
     return (
       <Shell expanded={expanded} setExpanded={setExpanded}>
         <div className="px-4">
-          <h2 className="text-2xl font-display font-bold leading-tight">
-            What needs fixing?
-          </h2>
+          <h2 className="text-2xl font-display font-bold leading-tight">What needs fixing?</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Describe it, set your budget, fundis will quote you back.
           </p>
@@ -372,9 +366,7 @@ export default function BookingSheet({
             {/* Templates */}
             {templates.length > 0 && (
               <div>
-                <div className="text-xs uppercase text-muted-foreground mb-2">
-                  Common problems
-                </div>
+                <div className="text-xs uppercase text-muted-foreground mb-2">Common problems</div>
                 <div className="flex flex-wrap gap-2">
                   {templates.map((t) => {
                     const active = pickedTemplate?.id === t.id;
@@ -462,11 +454,7 @@ export default function BookingSheet({
               )}
             </div>
 
-            <Button
-              className="w-full h-12 text-base"
-              onClick={submitRequest}
-              disabled={submitting}
-            >
+            <Button className="w-full h-12 text-base" onClick={submitRequest} disabled={submitting}>
               {submitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -533,8 +521,8 @@ export default function BookingSheet({
                       </div>
                       <div className="text-[11px] text-muted-foreground flex items-center gap-1">
                         <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
-                        {(fp?.rating ?? 5).toFixed(1)} · {km.toFixed(1)} km ·{" "}
-                        {etaMinutes(km || 1)} min
+                        {(fp?.rating ?? 5).toFixed(1)} · {km.toFixed(1)} km · {etaMinutes(km || 1)}{" "}
+                        min
                       </div>
                       {q.note && (
                         <div className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -581,15 +569,15 @@ export default function BookingSheet({
             Total paid · {formatTsh(activeJob.agreed_price ?? activeJob.price)}
           </div>
           <div className="mt-4">
-            <div className="text-sm font-medium mb-2">How was {activeFundi?.full_name ?? "the fundi"}?</div>
+            <div className="text-sm font-medium mb-2">
+              How was {activeFundi?.full_name ?? "the fundi"}?
+            </div>
             <div className="flex justify-center gap-1">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button key={n} onClick={() => setRating(n)} aria-label={`${n} star`}>
                   <Star
                     className={`h-7 w-7 ${
-                      n <= rating
-                        ? "fill-yellow-500 text-yellow-500"
-                        : "text-muted-foreground"
+                      n <= rating ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground"
                     }`}
                   />
                 </button>
@@ -603,11 +591,7 @@ export default function BookingSheet({
               className="mt-3"
             />
             <div className="flex gap-2 mt-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setReceiptOpen(true)}
-              >
+              <Button variant="outline" className="flex-1" onClick={() => setReceiptOpen(true)}>
                 View receipt
               </Button>
               <Button className="flex-1" onClick={submitRating} disabled={rating === 0}>
@@ -698,11 +682,11 @@ export default function BookingSheet({
           </Button>
         </div>
 
-        {(activeJob.before_photos?.length || activeJob.after_photos?.length || activeJob.started_at) && (
+        {(activeJob.before_photos?.length ||
+          activeJob.after_photos?.length ||
+          activeJob.started_at) && (
           <div className="mt-4 rounded-xl border bg-muted/30 p-3 space-y-3">
-            {activeJob.started_at && (
-              <WorkTimer startedAt={activeJob.started_at} />
-            )}
+            {activeJob.started_at && <WorkTimer startedAt={activeJob.started_at} />}
             {activeJob.before_photos && activeJob.before_photos.length > 0 && (
               <ProofRow label="Before" urls={activeJob.before_photos} />
             )}
@@ -727,7 +711,8 @@ function WorkTimer({ startedAt }: { startedAt: string }) {
   const m = mins % 60;
   return (
     <div className="text-xs text-muted-foreground">
-      Work in progress · {h > 0 ? `${h}h ` : ""}{m}m elapsed
+      Work in progress · {h > 0 ? `${h}h ` : ""}
+      {m}m elapsed
     </div>
   );
 }
@@ -738,7 +723,12 @@ function ProofRow({ label, urls }: { label: string; urls: string[] }) {
       <div className="text-[10px] uppercase text-muted-foreground mb-1">{label}</div>
       <div className="flex gap-2 overflow-x-auto scrollbar-none">
         {urls.map((u, i) => (
-          <SignedImage key={i} src={u} alt="" className="h-16 w-16 object-cover rounded-lg border" />
+          <SignedImage
+            key={i}
+            src={u}
+            alt=""
+            className="h-16 w-16 object-cover rounded-lg border"
+          />
         ))}
       </div>
     </div>

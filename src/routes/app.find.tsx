@@ -97,13 +97,13 @@ function FindPage() {
         <div className="px-4 py-3 flex items-center gap-3">
           {!hasActive && (
             <Button asChild variant="ghost" size="icon">
-              <Link to="/app/describe"><ArrowLeft className="h-4 w-4" /></Link>
+              <Link to="/app/describe">
+                <ArrowLeft className="h-4 w-4" />
+              </Link>
             </Button>
           )}
           <div className="flex-1 min-w-0">
-            <div className="font-display font-bold leading-tight truncate">
-              Fundis near you
-            </div>
+            <div className="font-display font-bold leading-tight truncate">Fundis near you</div>
             <div className="text-xs text-muted-foreground truncate">
               {meta.icon} {meta.label}
               {title ? ` · ${title}` : ""}

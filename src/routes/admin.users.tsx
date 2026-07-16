@@ -50,10 +50,7 @@ function AdminUsers() {
     return profiles.filter((p) => {
       if (tab !== "all" && p.role !== tab) return false;
       if (!ql) return true;
-      return (
-        p.full_name.toLowerCase().includes(ql) ||
-        (p.phone ?? "").toLowerCase().includes(ql)
-      );
+      return p.full_name.toLowerCase().includes(ql) || (p.phone ?? "").toLowerCase().includes(ql);
     });
   }, [profiles, q, tab]);
 
@@ -104,10 +101,7 @@ function AdminUsers() {
           {filtered.map((p) => {
             const f = fundis[p.id];
             return (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 p-3 md:p-4 hover:bg-muted/40"
-              >
+              <div key={p.id} className="flex items-center gap-3 p-3 md:p-4 hover:bg-muted/40">
                 <div className="h-10 w-10 rounded-full bg-primary/10 text-primary grid place-items-center font-semibold">
                   {p.full_name.charAt(0).toUpperCase()}
                 </div>
@@ -133,8 +127,7 @@ function AdminUsers() {
                     )}
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {p.phone ?? "No phone"} · joined{" "}
-                    {new Date(p.created_at).toLocaleDateString()}
+                    {p.phone ?? "No phone"} · joined {new Date(p.created_at).toLocaleDateString()}
                   </div>
                 </div>
                 {f && (

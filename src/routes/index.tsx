@@ -4,7 +4,17 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MapPin, Zap, Wrench, Hammer, Cog, ShieldCheck, Bell, Clock3, ChevronRight } from "lucide-react";
+import {
+  MapPin,
+  Zap,
+  Wrench,
+  Hammer,
+  Cog,
+  ShieldCheck,
+  Bell,
+  Clock3,
+  ChevronRight,
+} from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: Landing });
 
@@ -48,7 +58,9 @@ function Landing() {
             <Badge className="mb-4 border-0 bg-background/15 text-primary-foreground hover:bg-background/15">
               <ShieldCheck className="mr-1 h-3.5 w-3.5" /> Trusted nearby fundis
             </Badge>
-            <h1 className="max-w-xs text-3xl font-bold leading-tight">Book a fundi like you book a ride.</h1>
+            <h1 className="max-w-xs text-3xl font-bold leading-tight">
+              Book a fundi like you book a ride.
+            </h1>
             <p className="mt-3 max-w-sm text-sm text-primary-foreground/85">
               Fast requests, live tracking, upfront pricing, and real people ready to help now.
             </p>
@@ -59,7 +71,11 @@ function Landing() {
                 </Button>
               </Link>
               <Link to="/auth" search={{ role: "fundi" }}>
-                <Button size="lg" variant="ghost" className="h-12 rounded-2xl border border-primary-foreground/20 bg-background/10 px-5 text-primary-foreground hover:bg-background/15">
+                <Button
+                  size="lg"
+                  variant="ghost"
+                  className="h-12 rounded-2xl border border-primary-foreground/20 bg-background/10 px-5 text-primary-foreground hover:bg-background/15"
+                >
                   Drive jobs
                 </Button>
               </Link>
@@ -97,15 +113,20 @@ function Landing() {
                 </div>
               </div>
               <div className="space-y-3 p-4">
-                {["Plumber near Kariakoo", "Electrician in Oysterbay", "Mechanic in Kinondoni"].map((label) => (
-                  <div key={label} className="flex items-center justify-between rounded-2xl bg-secondary/60 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-medium">{label}</p>
-                      <p className="text-xs text-muted-foreground">Verified • ETA updates live</p>
+                {["Plumber near Kariakoo", "Electrician in Oysterbay", "Mechanic in Kinondoni"].map(
+                  (label) => (
+                    <div
+                      key={label}
+                      className="flex items-center justify-between rounded-2xl bg-secondary/60 px-4 py-3"
+                    >
+                      <div>
+                        <p className="text-sm font-medium">{label}</p>
+                        <p className="text-xs text-muted-foreground">Verified • ETA updates live</p>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     </div>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                ))}
+                  ),
+                )}
               </div>
             </Card>
           </section>

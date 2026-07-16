@@ -137,7 +137,11 @@ function CatalogAdmin() {
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              <Button size="sm" variant={r.is_active ? "outline" : "secondary"} onClick={() => toggle(r)}>
+              <Button
+                size="sm"
+                variant={r.is_active ? "outline" : "secondary"}
+                onClick={() => toggle(r)}
+              >
                 {r.is_active ? "Active" : "Hidden"}
               </Button>
               <Button size="icon" variant="ghost" onClick={() => remove(r.id)}>

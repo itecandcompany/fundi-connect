@@ -7,24 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Loader2,
-  MapPin,
-  X,
-  MessageCircle,
-  Phone,
-  Wallet,
-  Star,
-} from "lucide-react";
+import { Loader2, MapPin, X, MessageCircle, Phone, Wallet, Star } from "lucide-react";
 import { toast } from "sonner";
 import JobReceiptDialog from "@/components/JobReceiptDialog";
-import {
-  SERVICE_META,
-  ARRIVAL_RADIUS_M,
-  haversineKm,
-  formatTsh,
-  type ServiceKey,
-} from "@/lib/geo";
+import { SERVICE_META, ARRIVAL_RADIUS_M, haversineKm, formatTsh, type ServiceKey } from "@/lib/geo";
 import { sendBrowserNotification, ensureNotificationPermission } from "@/lib/push";
 import JobChat from "./chat/JobChat";
 import ProofOfWorkDialog, { type ProofMode, type ProofResult } from "./fundi/ProofOfWorkDialog";
@@ -198,7 +184,11 @@ export default function FundiLivePanel() {
       if (!latest) return;
       void supabase
         .from("fundis")
-        .update({ current_lat: latest[0], current_lng: latest[1], updated_at: new Date().toISOString() })
+        .update({
+          current_lat: latest[0],
+          current_lng: latest[1],
+          updated_at: new Date().toISOString(),
+        })
         .eq("id", user.id);
       if (active && active.status !== "completed" && active.status !== "cancelled") {
         enqueueLocationBackup(active.id, user.id, latest[0], latest[1]);
@@ -238,11 +228,7 @@ export default function FundiLivePanel() {
             row.status === "completed" ||
             row.status === "cancelled"
           ) {
-            if (
-              row.status === "cancelled" &&
-              row.cancelled_by &&
-              row.cancelled_by !== user.id
-            ) {
+            if (row.status === "cancelled" && row.cancelled_by && row.cancelled_by !== user.id) {
               const reason = row.cancellation_reason || "No reason provided";
               toast.error(`Client cancelled the job`, { description: reason });
               sendBrowserNotification("Job cancelled by client", reason);
@@ -343,11 +329,7 @@ export default function FundiLivePanel() {
     load();
     const ch = supabase
       .channel(`incoming-jobs-${user.id}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "jobs" },
-        () => load(),
-      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "jobs" }, () => load())
       .subscribe();
     return () => {
       cancelled = true;
@@ -491,12 +473,7 @@ export default function FundiLivePanel() {
 
       {/* Live map */}
       {(available || active) && (
-        <FundiMap
-          pos={pos}
-          active={active}
-          requests={incoming}
-          height={active ? 280 : 220}
-        />
+        <FundiMap pos={pos} active={active} requests={incoming} height={active ? 280 : 220} />
       )}
 
       {/* Earnings chip */}
@@ -528,7 +505,8 @@ export default function FundiLivePanel() {
             <div className="min-w-0">
               <div className="text-[10px] uppercase text-muted-foreground">Active job</div>
               <div className="font-display font-bold leading-tight truncate">
-                {SERVICE_META[active.service].icon} {active.problem_title || SERVICE_META[active.service].label}
+                {SERVICE_META[active.service].icon}{" "}
+                {active.problem_title || SERVICE_META[active.service].label}
               </div>
             </div>
             <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary capitalize whitespace-nowrap">
@@ -543,7 +521,12 @@ export default function FundiLivePanel() {
           {active.job_photos?.length > 0 && (
             <div className="flex gap-2 overflow-x-auto scrollbar-none">
               {active.job_photos.map((url, i) => (
-                <SignedImage key={i} src={url} alt="" className="h-20 w-20 object-cover rounded-lg border" />
+                <SignedImage
+                  key={i}
+                  src={url}
+                  alt=""
+                  className="h-20 w-20 object-cover rounded-lg border"
+                />
               ))}
             </div>
           )}
@@ -718,7 +701,8 @@ export default function FundiLivePanel() {
               rows={2}
             />
             <div className="text-xs text-muted-foreground">
-              You'll keep <span className="font-semibold text-foreground">90%</span> · platform fee 10%
+              You'll keep <span className="font-semibold text-foreground">90%</span> · platform fee
+              10%
             </div>
             <Button
               className="w-full h-12"

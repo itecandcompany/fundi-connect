@@ -20,20 +20,12 @@ export default function FundiMap(props: {
   useEffect(() => setMounted(true), []);
   const height = props.height ?? 260;
   if (!mounted) {
-    return (
-      <div
-        className="rounded-2xl overflow-hidden border bg-muted/30"
-        style={{ height }}
-      />
-    );
+    return <div className="rounded-2xl overflow-hidden border bg-muted/30" style={{ height }} />;
   }
   return (
     <Suspense
       fallback={
-        <div
-          className="rounded-2xl overflow-hidden border bg-muted/30"
-          style={{ height }}
-        />
+        <div className="rounded-2xl overflow-hidden border bg-muted/30" style={{ height }} />
       }
     >
       <Inner {...props} />

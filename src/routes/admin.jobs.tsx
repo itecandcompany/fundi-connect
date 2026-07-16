@@ -7,9 +7,7 @@ import { Button } from "@/components/ui/button";
 import { SERVICE_META, formatTsh, type ServiceKey } from "@/lib/geo";
 import { toast } from "sonner";
 import { MapPin, X } from "lucide-react";
-import JobDetailsDrawer, {
-  type JobDetailsRow,
-} from "@/components/admin/JobDetailsDrawer";
+import JobDetailsDrawer, { type JobDetailsRow } from "@/components/admin/JobDetailsDrawer";
 
 export const Route = createFileRoute("/admin/jobs")({ component: AdminJobs });
 
@@ -76,10 +74,7 @@ function AdminJobs() {
       new Set(rows.flatMap((j) => [j.client_id, j.fundi_id].filter(Boolean) as string[])),
     );
     if (ids.length) {
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("id, full_name")
-        .in("id", ids);
+      const { data: p } = await supabase.from("profiles").select("id, full_name").in("id", ids);
       const map: Record<string, string> = {};
       for (const r of p ?? []) map[r.id] = r.full_name;
       setProfiles(map);
@@ -100,9 +95,7 @@ function AdminJobs() {
   const filtered = useMemo(() => {
     if (filter === "all") return jobs;
     if (filter === "active")
-      return jobs.filter(
-        (j) => !(j.status === "completed" || j.status === "cancelled"),
-      );
+      return jobs.filter((j) => !(j.status === "completed" || j.status === "cancelled"));
     return jobs.filter((j) => j.status === filter);
   }, [jobs, filter]);
 
@@ -182,8 +175,8 @@ function AdminJobs() {
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground mt-0.5">
-                    Client: {profiles[j.client_id] ?? "—"} ·{" "}
-                    Fundi: {j.fundi_id ? (profiles[j.fundi_id] ?? "—") : "unassigned"}
+                    Client: {profiles[j.client_id] ?? "—"} · Fundi:{" "}
+                    {j.fundi_id ? (profiles[j.fundi_id] ?? "—") : "unassigned"}
                   </div>
                   <div className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                     <MapPin className="h-3 w-3" />

@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Send, Check, CheckCheck } from "lucide-react";
 
-type Msg = { id: string; sender_id: string; body: string; created_at: string; read_at: string | null };
+type Msg = {
+  id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
+  read_at: string | null;
+};
 
 export default function JobChat({
   jobId,
@@ -73,9 +79,7 @@ export default function JobChat({
       .in("id", unread)
       .then(({ error }) => {
         if (error) return;
-        setMsgs((prev) =>
-          prev.map((m) => (unread.includes(m.id) ? { ...m, read_at: stamp } : m)),
-        );
+        setMsgs((prev) => prev.map((m) => (unread.includes(m.id) ? { ...m, read_at: stamp } : m)));
       });
   }, [jobId, open, user?.id, msgs]);
 

@@ -11,11 +11,11 @@ export default defineConfig({
     ssr: {
       // Ensure server output lands where Vercel expects
       target: "node",
-      noExternal: []
+      noExternal: [],
     },
     build: {
       // Postpone minification/sourcemap if you want smaller builds
-      sourcemap: false
-    }
-  }
+      sourcemap: false,
+    },
+  },
 });

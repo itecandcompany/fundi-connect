@@ -1,5 +1,11 @@
 import { useRef, useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Camera, Loader2, X, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,7 +106,11 @@ function SignaturePad({ onChange }: { onChange: (blob: Blob | null) => void }) {
       </div>
       <div className="flex justify-between text-xs">
         <span className="text-muted-foreground">Client signs here</span>
-        <button type="button" onClick={clear} className="text-muted-foreground inline-flex items-center gap-1">
+        <button
+          type="button"
+          onClick={clear}
+          className="text-muted-foreground inline-flex items-center gap-1"
+        >
           <RotateCcw className="h-3 w-3" /> Clear
         </button>
       </div>
@@ -137,8 +147,7 @@ export default function ProofOfWorkDialog({
   }, [open]);
 
   const requiresSignature = mode === "complete";
-  const canSubmit =
-    files.length > 0 && (!requiresSignature || sigBlob !== null) && !busy;
+  const canSubmit = files.length > 0 && (!requiresSignature || sigBlob !== null) && !busy;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;

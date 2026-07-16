@@ -99,7 +99,12 @@ export default function FundiMap({
             {pos && (
               <Polyline
                 positions={[pos, [active.client_lat, active.client_lng]]}
-                pathOptions={{ color: SERVICE_META[active.service].color, weight: 4, opacity: 0.7, dashArray: "8 8" }}
+                pathOptions={{
+                  color: SERVICE_META[active.service].color,
+                  weight: 4,
+                  opacity: 0.7,
+                  dashArray: "8 8",
+                }}
               />
             )}
           </>

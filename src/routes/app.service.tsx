@@ -31,10 +31,16 @@ function ServicePicker() {
           <div className="flex items-center gap-1">
             {profile?.role === "admin" && (
               <Button asChild variant="ghost" size="icon">
-                <Link to="/admin"><Shield className="h-4 w-4" /></Link>
+                <Link to="/admin">
+                  <Shield className="h-4 w-4" />
+                </Link>
               </Button>
             )}
-            <Button variant="ghost" size="icon" onClick={() => signOut().then(() => navigate({ to: "/" }))}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => signOut().then(() => navigate({ to: "/" }))}
+            >
               <LogOut className="h-4 w-4" />
             </Button>
           </div>
@@ -66,9 +72,7 @@ function ServicePicker() {
                   {s.icon}
                 </div>
                 <div className="font-semibold">{s.label}</div>
-                <div className="text-xs text-muted-foreground mt-1">
-                  from {formatTsh(s.price)}
-                </div>
+                <div className="text-xs text-muted-foreground mt-1">from {formatTsh(s.price)}</div>
                 <div className="mt-3 inline-flex items-center text-xs text-primary font-medium">
                   Continue <ArrowRight className="h-3 w-3 ml-1" />
                 </div>

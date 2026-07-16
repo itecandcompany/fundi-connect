@@ -39,8 +39,7 @@ function AuthPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const parsed =
-      mode === "signup" ? signupSchema.safeParse(form) : signinSchema.safeParse(form);
+    const parsed = mode === "signup" ? signupSchema.safeParse(form) : signinSchema.safeParse(form);
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setBusy(true);
     try {
@@ -74,7 +73,9 @@ function AuthPage() {
   return (
     <div className="min-h-screen bg-gradient-hero flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 shadow-elegant">
-        <Link to="/" className="text-sm text-muted-foreground hover:underline">← Back</Link>
+        <Link to="/" className="text-sm text-muted-foreground hover:underline">
+          ← Back
+        </Link>
         <h1 className="text-2xl font-bold mt-3">
           {mode === "signup" ? "Join FundiFast" : "Welcome back"}
         </h1>
@@ -88,16 +89,33 @@ function AuthPage() {
           {mode === "signup" && (
             <div>
               <Label htmlFor="name">Full name</Label>
-              <Input id="name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} required />
+              <Input
+                id="name"
+                value={form.full_name}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                required
+              />
             </div>
           )}
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+            <Input
+              id="email"
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="pw">Password</Label>
-            <Input id="pw" type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+            <Input
+              id="pw"
+              type="password"
+              value={form.password}
+              onChange={(e) => setForm({ ...form, password: e.target.value })}
+              required
+            />
           </div>
           <Button type="submit" disabled={busy} className="w-full bg-gradient-primary">
             {busy ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"}

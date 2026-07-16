@@ -25,7 +25,9 @@ export const getOpenJobsForFundi = createServerFn({ method: "GET" })
 
     const { data, error } = await supabaseAdmin
       .from("jobs")
-      .select("id, client_id, fundi_id, service, status, client_lat, client_lng, price, agreed_price, problem_title, problem_description, job_photos, created_at")
+      .select(
+        "id, client_id, fundi_id, service, status, client_lat, client_lng, price, agreed_price, problem_title, problem_description, job_photos, created_at",
+      )
       .eq("service", fundi.service)
       .in("status", ["searching", "quoting"])
       .order("created_at", { ascending: false })

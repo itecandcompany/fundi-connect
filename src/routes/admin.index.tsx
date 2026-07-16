@@ -27,13 +27,26 @@ function AdminOverview() {
       const [users, fundis, online, jobsAll, jobsActive, jobsDone, tx] = await Promise.all([
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("fundis").select("id", { count: "exact", head: true }),
-        supabase.from("fundis").select("id", { count: "exact", head: true }).eq("is_available", true),
+        supabase
+          .from("fundis")
+          .select("id", { count: "exact", head: true })
+          .eq("is_available", true),
         supabase.from("jobs").select("id", { count: "exact", head: true }),
         supabase
           .from("jobs")
           .select("id", { count: "exact", head: true })
-          .in("status", ["searching", "quoting", "accepted", "on_the_way", "arrived", "in_progress"]),
-        supabase.from("jobs").select("id", { count: "exact", head: true }).eq("status", "completed"),
+          .in("status", [
+            "searching",
+            "quoting",
+            "accepted",
+            "on_the_way",
+            "arrived",
+            "in_progress",
+          ]),
+        supabase
+          .from("jobs")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "completed"),
         supabase.from("transactions").select("amount, commission"),
       ]);
 
@@ -61,18 +74,45 @@ function AdminOverview() {
 
   const cards = [
     { label: "Total users", value: kpis?.totalUsers ?? "—", icon: Users, color: "text-blue-600" },
-    { label: "Registered fundis", value: kpis?.totalFundis ?? "—", icon: Wrench, color: "text-amber-600" },
-    { label: "Fundis online now", value: kpis?.fundisOnline ?? "—", icon: Activity, color: "text-green-600" },
-    { label: "Total jobs", value: kpis?.totalJobs ?? "—", icon: Briefcase, color: "text-indigo-600" },
-    { label: "Active jobs", value: kpis?.activeJobs ?? "—", icon: Activity, color: "text-orange-600" },
-    { label: "Completed jobs", value: kpis?.completedJobs ?? "—", icon: CheckCircle2, color: "text-emerald-600" },
+    {
+      label: "Registered fundis",
+      value: kpis?.totalFundis ?? "—",
+      icon: Wrench,
+      color: "text-amber-600",
+    },
+    {
+      label: "Fundis online now",
+      value: kpis?.fundisOnline ?? "—",
+      icon: Activity,
+      color: "text-green-600",
+    },
+    {
+      label: "Total jobs",
+      value: kpis?.totalJobs ?? "—",
+      icon: Briefcase,
+      color: "text-indigo-600",
+    },
+    {
+      label: "Active jobs",
+      value: kpis?.activeJobs ?? "—",
+      icon: Activity,
+      color: "text-orange-600",
+    },
+    {
+      label: "Completed jobs",
+      value: kpis?.completedJobs ?? "—",
+      icon: CheckCircle2,
+      color: "text-emerald-600",
+    },
   ];
 
   return (
     <div className="space-y-6 max-w-6xl">
       <div>
         <h1 className="font-display text-2xl font-bold">Overview</h1>
-        <p className="text-sm text-muted-foreground">Live snapshot of the platform. Refreshes every 15s.</p>
+        <p className="text-sm text-muted-foreground">
+          Live snapshot of the platform. Refreshes every 15s.
+        </p>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -80,7 +120,9 @@ function AdminOverview() {
           <Card key={c.label} className="p-4">
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">{c.label}</div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                  {c.label}
+                </div>
                 <div className="font-display text-2xl font-bold mt-1">{c.value}</div>
               </div>
               <c.icon className={`h-5 w-5 ${c.color}`} />

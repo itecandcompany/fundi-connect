@@ -1,1 +1,1 @@
-export { requireAdmin } from '@/integrations/supabase/admin-middleware'
+export { requireAdmin } from "@/integrations/supabase/admin-middleware";

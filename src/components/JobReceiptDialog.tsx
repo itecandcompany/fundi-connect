@@ -46,7 +46,11 @@ export default function JobReceiptDialog({
     (async () => {
       const [{ data: j }, { data: t }, { data: r }] = await Promise.all([
         supabase.from("jobs").select("*").eq("id", jobId).maybeSingle(),
-        supabase.from("transactions").select("amount, commission, fundi_earnings, created_at").eq("job_id", jobId).maybeSingle(),
+        supabase
+          .from("transactions")
+          .select("amount, commission, fundi_earnings, created_at")
+          .eq("job_id", jobId)
+          .maybeSingle(),
         supabase.from("ratings").select("stars, review").eq("job_id", jobId).maybeSingle(),
       ]);
       if (cancelled) return;
@@ -55,7 +59,11 @@ export default function JobReceiptDialog({
       setRating((r as Rating) ?? null);
       const otherId = role === "client" ? (j as Job)?.fundi_id : (j as Job)?.client_id;
       if (otherId) {
-        const { data: p } = await supabase.from("profiles").select("full_name").eq("id", otherId).maybeSingle();
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", otherId)
+          .maybeSingle();
         if (!cancelled) setCounterparty(p?.full_name ?? (role === "client" ? "Fundi" : "Client"));
       }
       if (!cancelled) setLoading(false);
@@ -68,7 +76,7 @@ export default function JobReceiptDialog({
   const total = Number(tx?.amount ?? job?.agreed_price ?? job?.price ?? 0);
   const commission = Number(tx?.commission ?? Math.round(total * 0.1));
   const earnings = Number(tx?.fundi_earnings ?? total - commission);
-  const when = (tx?.created_at ?? job?.completed_at) ?? null;
+  const when = tx?.created_at ?? job?.completed_at ?? null;
   const meta = job ? SERVICE_META[job.service] : null;
 
   return (
@@ -145,9 +153,7 @@ export default function JobReceiptDialog({
                     />
                   ))}
                 </div>
-                {rating.review && (
-                  <div className="text-sm mt-1 italic">"{rating.review}"</div>
-                )}
+                {rating.review && <div className="text-sm mt-1 italic">"{rating.review}"</div>}
               </div>
             )}
 
