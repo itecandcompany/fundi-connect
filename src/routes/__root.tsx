@@ -47,22 +47,11 @@ export const Route = createRootRoute({
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
       { name: "twitter:title", content: "FundiFast — Hire trusted local fundis in Tanzania" },
       {
         name: "twitter:description",
         content:
           "FundiFast connects you with verified plumbers, electricians, carpenters and mechanics nearby in real time. Request a fundi, track them live, pay a fair price.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ba25a5c4-3222-4071-90bf-50992e13e46a/id-preview-1b2cb12e--cef31f38-ab3b-43c5-8622-708c9ac7cd17.lovable.app-1779171015069.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/ba25a5c4-3222-4071-90bf-50992e13e46a/id-preview-1b2cb12e--cef31f38-ab3b-43c5-8622-708c9ac7cd17.lovable.app-1779171015069.png",
       },
     ],
     links: [
