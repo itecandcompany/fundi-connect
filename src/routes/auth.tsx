@@ -63,7 +63,15 @@ function AuthPage() {
       }
       navigate({ to: "/app" });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Auth failed";
+      let msg = err instanceof Error ? err.message : "Auth failed";
+      // A bare "Failed to fetch" means the browser couldn't reach Supabase
+      // at all — either no network connectivity, or SUPABASE_URL isn't
+      // configured correctly. Give people something actionable instead of
+      // the raw browser error text.
+      if (err instanceof TypeError && /failed to fetch/i.test(err.message)) {
+        msg =
+          "Couldn't reach the server. Check your internet connection, or that this app's Supabase credentials are configured correctly (see .env.example).";
+      }
       toast.error(msg);
     } finally {
       setBusy(false);
