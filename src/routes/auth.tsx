@@ -25,13 +25,18 @@ const signupSchema = signinSchema.extend({
   full_name: z.string().min(2).max(80),
 });
 
+const forgotSchema = z.object({
+  email: z.string().email(),
+});
+
 function AuthPage() {
   const { role } = Route.useSearch();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<"signin" | "signup">("signup");
+  const [mode, setMode] = useState<"signin" | "signup" | "forgot">("signup");
   const [form, setForm] = useState({ email: "", password: "", full_name: "" });
   const [busy, setBusy] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
 
   useEffect(() => {
     if (!loading && user) navigate({ to: "/app" });
@@ -39,6 +44,28 @@ function AuthPage() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === "forgot") {
+      const parsed = forgotSchema.safeParse({ email: form.email });
+      if (!parsed.success) return toast.error(parsed.error.issues[0].message);
+      setBusy(true);
+      try {
+        // Supabase doesn't error here even if the email doesn't have an
+        // account attached to it - that's intentional (prevents leaking
+        // which emails are registered). Always show the same message.
+        const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+        if (error) throw error;
+        setResetSent(true);
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "Couldn't send reset email");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
     const parsed = mode === "signup" ? signupSchema.safeParse(form) : signinSchema.safeParse(form);
     if (!parsed.success) return toast.error(parsed.error.issues[0].message);
     setBusy(true);
@@ -95,57 +122,106 @@ function AuthPage() {
           ← Back
         </Link>
         <h1 className="text-2xl font-bold mt-3">
-          {mode === "signup" ? "Join FundiFast" : "Welcome back"}
+          {mode === "signup"
+            ? "Join FundiFast"
+            : mode === "forgot"
+              ? "Reset your password"
+              : "Welcome back"}
         </h1>
         <p className="text-sm text-muted-foreground mb-6">
           {mode === "signup"
             ? `Sign up as ${role === "fundi" ? "a Fundi (technician)" : "a Client"}.`
-            : "Sign in to continue."}
+            : mode === "forgot"
+              ? "Enter your email and we'll send you a link to reset your password."
+              : "Sign in to continue."}
         </p>
 
-        <form onSubmit={submit} className="space-y-4">
-          {mode === "signup" && (
+        {mode === "forgot" && resetSent ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              If an account exists for{" "}
+              <span className="font-medium text-foreground">{form.email}</span>, we've sent a link
+              to reset your password. Check your inbox (and spam folder).
+            </p>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setMode("signin");
+                setResetSent(false);
+              }}
+            >
+              Back to sign in
+            </Button>
+          </div>
+        ) : (
+          <form onSubmit={submit} className="space-y-4">
+            {mode === "signup" && (
+              <div>
+                <Label htmlFor="name">Full name</Label>
+                <Input
+                  id="name"
+                  value={form.full_name}
+                  onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                  required
+                />
+              </div>
+            )}
             <div>
-              <Label htmlFor="name">Full name</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="name"
-                value={form.full_name}
-                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
                 required
               />
             </div>
-          )}
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
-            />
-          </div>
-          <div>
-            <Label htmlFor="pw">Password</Label>
-            <Input
-              id="pw"
-              type="password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              required
-            />
-          </div>
-          <Button type="submit" disabled={busy} className="w-full bg-gradient-primary">
-            {busy ? "Please wait..." : mode === "signup" ? "Create account" : "Sign in"}
-          </Button>
-        </form>
+            {mode !== "forgot" && (
+              <div>
+                <Label htmlFor="pw">Password</Label>
+                <Input
+                  id="pw"
+                  type="password"
+                  value={form.password}
+                  onChange={(e) => setForm({ ...form, password: e.target.value })}
+                  required
+                />
+              </div>
+            )}
+            {mode === "signin" && (
+              <button
+                type="button"
+                onClick={() => setMode("forgot")}
+                className="text-sm text-muted-foreground hover:text-foreground -mt-2 block"
+              >
+                Forgot password?
+              </button>
+            )}
+            <Button type="submit" disabled={busy} className="w-full bg-gradient-primary">
+              {busy
+                ? "Please wait..."
+                : mode === "signup"
+                  ? "Create account"
+                  : mode === "forgot"
+                    ? "Send reset link"
+                    : "Sign in"}
+            </Button>
+          </form>
+        )}
 
-        <button
-          onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
-          className="mt-5 text-sm text-muted-foreground hover:text-foreground block w-full text-center"
-        >
-          {mode === "signup" ? "Already have an account? Sign in" : "New here? Create an account"}
-        </button>
+        {!(mode === "forgot" && resetSent) && (
+          <button
+            onClick={() => setMode(mode === "signup" ? "signin" : "signup")}
+            className="mt-5 text-sm text-muted-foreground hover:text-foreground block w-full text-center"
+          >
+            {mode === "signup"
+              ? "Already have an account? Sign in"
+              : mode === "forgot"
+                ? "Remembered it? Sign in"
+                : "New here? Create an account"}
+          </button>
+        )}
       </Card>
     </div>
   );

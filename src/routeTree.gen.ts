@@ -16,6 +16,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as FundiSetupRouteImport } from './routes/fundi.setup'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AppServiceRouteImport } from './routes/app.service'
 import { Route as AppFindRouteImport } from './routes/app.find'
 import { Route as AppDescribeRouteImport } from './routes/app.describe'
@@ -58,6 +59,11 @@ const FundiSetupRoute = FundiSetupRouteImport.update({
   path: '/fundi/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AppServiceRoute = AppServiceRouteImport.update({
   id: '/service',
   path: '/service',
@@ -93,26 +99,28 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
   '/app/service': typeof AppServiceRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/fundi/setup': typeof FundiSetupRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
   '/app/service': typeof AppServiceRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/fundi/setup': typeof FundiSetupRoute
   '/admin': typeof AdminIndexRoute
   '/app': typeof AppIndexRoute
@@ -122,13 +130,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/app': typeof AppRouteWithChildren
-  '/auth': typeof AuthRoute
+  '/auth': typeof AuthRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
   '/app/service': typeof AppServiceRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/fundi/setup': typeof FundiSetupRoute
   '/admin/': typeof AdminIndexRoute
   '/app/': typeof AppIndexRoute
@@ -146,6 +155,7 @@ export interface FileRouteTypes {
     | '/app/describe'
     | '/app/find'
     | '/app/service'
+    | '/auth/reset-password'
     | '/fundi/setup'
     | '/admin/'
     | '/app/'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/app/describe'
     | '/app/find'
     | '/app/service'
+    | '/auth/reset-password'
     | '/fundi/setup'
     | '/admin'
     | '/app'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/app/describe'
     | '/app/find'
     | '/app/service'
+    | '/auth/reset-password'
     | '/fundi/setup'
     | '/admin/'
     | '/app/'
@@ -183,7 +195,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   AppRoute: typeof AppRouteWithChildren
-  AuthRoute: typeof AuthRoute
+  AuthRoute: typeof AuthRouteWithChildren
   FundiSetupRoute: typeof FundiSetupRoute
 }
 
@@ -237,6 +249,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/fundi/setup'
       preLoaderRoute: typeof FundiSetupRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
     }
     '/app/service': {
       id: '/app/service'
@@ -315,11 +334,21 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface AuthRouteChildren {
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+}
+
+const AuthRouteChildren: AuthRouteChildren = {
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+}
+
+const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   AppRoute: AppRouteWithChildren,
-  AuthRoute: AuthRoute,
+  AuthRoute: AuthRouteWithChildren,
   FundiSetupRoute: FundiSetupRoute,
 }
 export const routeTree = rootRouteImport
