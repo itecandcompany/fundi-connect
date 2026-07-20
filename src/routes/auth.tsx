@@ -44,7 +44,7 @@ function AuthPage() {
     setBusy(true);
     try {
       if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: form.email,
           password: form.password,
           options: {
@@ -53,6 +53,16 @@ function AuthPage() {
           },
         });
         if (error) throw error;
+        if (!data.session) {
+          // Email confirmation is required on this project: the account
+          // was created, but there's no active session yet. Sending
+          // them to /app here would just bounce them straight back to
+          // /auth with no explanation, since the route guard checks for
+          // a logged-in user. Tell them what's actually happening instead.
+          toast.success("Account created! Check your email to confirm before signing in.");
+          setMode("signin");
+          return;
+        }
         toast.success("Welcome to FundiFast!");
       } else {
         const { error } = await supabase.auth.signInWithPassword({
