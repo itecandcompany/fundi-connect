@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+  <channel>
+    <title>ITEC Blog</title>
+    <link>https://itecandcompany.com/</link>
+    <description>Insights on tech, innovation, and business.</description>
+    <item>
+      <title>AI Agents Are Moving From Demo to Deployment in 2026</title>
+      <link>https://itecandcompany.com/posts/ai-agents-transforming-business.html</link>
+      <pubDate>Thu, 16 Jul 2026 00:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>10 Tech Trends Shaping 2026</title>
+      <link>https://itecandcompany.com/posts/first-ai-trends.html</link>
+      <pubDate>Thu, 16 Jul 2026 00:00:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>
