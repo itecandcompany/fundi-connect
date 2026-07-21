@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { SERVICE_META, formatTsh, type ServiceKey } from "@/lib/geo";
 import { Search, Star } from "lucide-react";
+import UserActionsMenu from "@/components/admin/UserActionsMenu";
 
 export const Route = createFileRoute("/admin/users")({ component: AdminUsers });
 
@@ -15,6 +16,7 @@ type Profile = {
   phone: string | null;
   role: "client" | "fundi" | "admin";
   created_at: string;
+  is_suspended: boolean;
 };
 type Fundi = {
   id: string;
@@ -31,19 +33,20 @@ function AdminUsers() {
   const [q, setQ] = useState("");
   const [tab, setTab] = useState<"all" | "client" | "fundi" | "admin">("all");
 
-  useEffect(() => {
-    const load = async () => {
-      const [{ data: p }, { data: f }] = await Promise.all([
-        supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(500),
-        supabase.from("fundis").select("*"),
-      ]);
-      setProfiles((p as Profile[]) ?? []);
-      const map: Record<string, Fundi> = {};
-      for (const r of (f as Fundi[]) ?? []) map[r.id] = r;
-      setFundis(map);
-    };
-    load();
+  const load = useCallback(async () => {
+    const [{ data: p }, { data: f }] = await Promise.all([
+      supabase.from("profiles").select("*").order("created_at", { ascending: false }).limit(500),
+      supabase.from("fundis").select("*"),
+    ]);
+    setProfiles((p as Profile[]) ?? []);
+    const map: Record<string, Fundi> = {};
+    for (const r of (f as Fundi[]) ?? []) map[r.id] = r;
+    setFundis(map);
   }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -101,7 +104,10 @@ function AdminUsers() {
           {filtered.map((p) => {
             const f = fundis[p.id];
             return (
-              <div key={p.id} className="flex items-center gap-3 p-3 md:p-4 hover:bg-muted/40">
+              <div
+                key={p.id}
+                className={`flex items-center gap-3 p-3 md:p-4 hover:bg-muted/40 ${p.is_suspended ? "bg-destructive/5" : ""}`}
+              >
                 <div className="h-10 w-10 rounded-full bg-primary/10 text-primary grid place-items-center font-semibold">
                   {p.full_name.charAt(0).toUpperCase()}
                 </div>
@@ -120,6 +126,11 @@ function AdminUsers() {
                     >
                       {p.role}
                     </Badge>
+                    {p.is_suspended && (
+                      <Badge variant="destructive" className="text-[10px]">
+                        Suspended
+                      </Badge>
+                    )}
                     {f && (
                       <span className="text-xs text-muted-foreground">
                         {SERVICE_META[f.service]?.icon} {SERVICE_META[f.service]?.label}
@@ -145,6 +156,23 @@ function AdminUsers() {
                     </div>
                   </div>
                 )}
+                <UserActionsMenu
+                  userId={p.id}
+                  fullName={p.full_name}
+                  role={p.role}
+                  isSuspended={p.is_suspended}
+                  fundi={
+                    f
+                      ? {
+                          id: f.id,
+                          service: f.service,
+                          hourly_rate: f.hourly_rate,
+                          is_available: f.is_available,
+                        }
+                      : null
+                  }
+                  onChanged={load}
+                />
               </div>
             );
           })}

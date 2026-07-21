@@ -21,6 +21,8 @@ import { Route as AppServiceRouteImport } from './routes/app.service'
 import { Route as AppFindRouteImport } from './routes/app.find'
 import { Route as AppDescribeRouteImport } from './routes/app.describe'
 import { Route as AdminUsersRouteImport } from './routes/admin.users'
+import { Route as AdminTransactionsRouteImport } from './routes/admin.transactions'
+import { Route as AdminRatingsRouteImport } from './routes/admin.ratings'
 import { Route as AdminJobsRouteImport } from './routes/admin.jobs'
 import { Route as AdminCatalogRouteImport } from './routes/admin.catalog'
 
@@ -84,6 +86,16 @@ const AdminUsersRoute = AdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminTransactionsRoute = AdminTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRatingsRoute = AdminRatingsRouteImport.update({
+  id: '/ratings',
+  path: '/ratings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminJobsRoute = AdminJobsRouteImport.update({
   id: '/jobs',
   path: '/jobs',
@@ -102,6 +114,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/ratings': typeof AdminRatingsRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
@@ -116,6 +130,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/ratings': typeof AdminRatingsRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
@@ -133,6 +149,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/admin/catalog': typeof AdminCatalogRoute
   '/admin/jobs': typeof AdminJobsRoute
+  '/admin/ratings': typeof AdminRatingsRoute
+  '/admin/transactions': typeof AdminTransactionsRoute
   '/admin/users': typeof AdminUsersRoute
   '/app/describe': typeof AppDescribeRoute
   '/app/find': typeof AppFindRoute
@@ -151,6 +169,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/catalog'
     | '/admin/jobs'
+    | '/admin/ratings'
+    | '/admin/transactions'
     | '/admin/users'
     | '/app/describe'
     | '/app/find'
@@ -165,6 +185,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/catalog'
     | '/admin/jobs'
+    | '/admin/ratings'
+    | '/admin/transactions'
     | '/admin/users'
     | '/app/describe'
     | '/app/find'
@@ -181,6 +203,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/admin/catalog'
     | '/admin/jobs'
+    | '/admin/ratings'
+    | '/admin/transactions'
     | '/admin/users'
     | '/app/describe'
     | '/app/find'
@@ -285,6 +309,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminUsersRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/transactions': {
+      id: '/admin/transactions'
+      path: '/transactions'
+      fullPath: '/admin/transactions'
+      preLoaderRoute: typeof AdminTransactionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/ratings': {
+      id: '/admin/ratings'
+      path: '/ratings'
+      fullPath: '/admin/ratings'
+      preLoaderRoute: typeof AdminRatingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/jobs': {
       id: '/admin/jobs'
       path: '/jobs'
@@ -305,6 +343,8 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminCatalogRoute: typeof AdminCatalogRoute
   AdminJobsRoute: typeof AdminJobsRoute
+  AdminRatingsRoute: typeof AdminRatingsRoute
+  AdminTransactionsRoute: typeof AdminTransactionsRoute
   AdminUsersRoute: typeof AdminUsersRoute
   AdminIndexRoute: typeof AdminIndexRoute
 }
@@ -312,6 +352,8 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminCatalogRoute: AdminCatalogRoute,
   AdminJobsRoute: AdminJobsRoute,
+  AdminRatingsRoute: AdminRatingsRoute,
+  AdminTransactionsRoute: AdminTransactionsRoute,
   AdminUsersRoute: AdminUsersRoute,
   AdminIndexRoute: AdminIndexRoute,
 }

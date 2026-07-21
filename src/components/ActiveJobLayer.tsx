@@ -8,7 +8,13 @@ import { Phone, Navigation2, X, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 
 type JobStatus =
-  "searching" | "accepted" | "on_the_way" | "arrived" | "in_progress" | "completed" | "cancelled";
+  | "searching"
+  | "accepted"
+  | "on_the_way"
+  | "arrived"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 
 export type ActiveJob = {
   id: string;

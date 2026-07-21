@@ -5,9 +5,9 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SERVICE_META, formatTsh, type ServiceKey } from "@/lib/geo";
-import { toast } from "sonner";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Repeat2 } from "lucide-react";
 import JobDetailsDrawer, { type JobDetailsRow } from "@/components/admin/JobDetailsDrawer";
+import { CancelJobDialog, ReassignJobDialog } from "@/components/admin/JobActionDialogs";
 
 export const Route = createFileRoute("/admin/jobs")({ component: AdminJobs });
 
@@ -61,6 +61,10 @@ function AdminJobs() {
   const [filter, setFilter] = useState<"active" | "all" | JobStatus>("active");
   const [selected, setSelected] = useState<JobDetailsRow | null>(null);
   const [open, setOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [reassignTarget, setReassignTarget] = useState<{ id: string; service: ServiceKey } | null>(
+    null,
+  );
 
   const load = async () => {
     const { data } = await supabase
@@ -98,21 +102,6 @@ function AdminJobs() {
       return jobs.filter((j) => !(j.status === "completed" || j.status === "cancelled"));
     return jobs.filter((j) => j.status === filter);
   }, [jobs, filter]);
-
-  const forceCancel = async (id: string) => {
-    const reason = prompt("Reason for force-cancelling this job?")?.trim();
-    if (!reason) return;
-    const { error } = await supabase
-      .from("jobs")
-      .update({
-        status: "cancelled",
-        cancellation_reason: `[admin] ${reason}`,
-        cancelled_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-    if (error) toast.error(error.message);
-    else toast.success("Job cancelled");
-  };
 
   const openDetails = (j: Job) => {
     setSelected(j as unknown as JobDetailsRow);
@@ -190,17 +179,30 @@ function AdminJobs() {
                   )}
                 </div>
                 {!(j.status === "completed" || j.status === "cancelled") && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-rose-600 shrink-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      forceCancel(j.id);
-                    }}
-                  >
-                    <X className="h-4 w-4" /> Cancel
-                  </Button>
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReassignTarget({ id: j.id, service: j.service });
+                      }}
+                    >
+                      <Repeat2 className="h-4 w-4" /> Reassign
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-rose-600"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setCancelTarget(j.id);
+                      }}
+                    >
+                      <X className="h-4 w-4" /> Cancel
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>
@@ -208,6 +210,19 @@ function AdminJobs() {
         </div>
       </Card>
       <JobDetailsDrawer job={selected} open={open} onOpenChange={setOpen} />
+      <CancelJobDialog
+        jobId={cancelTarget}
+        open={cancelTarget !== null}
+        onOpenChange={(v) => !v && setCancelTarget(null)}
+        onDone={load}
+      />
+      <ReassignJobDialog
+        jobId={reassignTarget?.id ?? null}
+        service={reassignTarget?.service ?? null}
+        open={reassignTarget !== null}
+        onOpenChange={(v) => !v && setReassignTarget(null)}
+        onDone={load}
+      />
     </div>
   );
 }

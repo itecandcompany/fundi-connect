@@ -12,12 +12,23 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Users, Briefcase, Wrench, ArrowLeft, Shield } from "lucide-react";
+import {
+  LayoutDashboard,
+  Users,
+  Briefcase,
+  Wrench,
+  ArrowLeft,
+  Shield,
+  Wallet,
+  Star,
+} from "lucide-react";
 
 const items = [
   { title: "Overview", url: "/admin", icon: LayoutDashboard, exact: true },
   { title: "Users & Fundis", url: "/admin/users", icon: Users },
   { title: "Jobs Monitor", url: "/admin/jobs", icon: Briefcase },
+  { title: "Transactions", url: "/admin/transactions", icon: Wallet },
+  { title: "Ratings & Reviews", url: "/admin/ratings", icon: Star },
   { title: "Problem Catalog", url: "/admin/catalog", icon: Wrench },
 ];
 
